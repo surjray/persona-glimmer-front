@@ -52,9 +52,9 @@ export const getClient = async () => {
   }, 5000);
   
   // Monkey patch the query method to log the last query
-  client.query = (...args: any[]) => {
+  client.query = (text: any, params?: any[]) => {
     clearTimeout(timeout);
-    return query(...args);
+    return query(text, params);
   };
   
   client.release = () => {

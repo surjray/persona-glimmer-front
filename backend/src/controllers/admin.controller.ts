@@ -1,13 +1,14 @@
-import { Response, NextFunction } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { query } from '../config/database';
 import { ValidationError } from '../utils/errors';
 
 // Simple admin authentication - check for admin API key in header
 const ADMIN_API_KEY = process.env.ADMIN_API_KEY || 'dev-admin-key-change-in-production';
 
-export interface AdminRequest extends Express.Request {
+export interface AdminRequest extends Request {
   headers: {
     'x-admin-api-key'?: string;
+    [key: string]: string | string[] | undefined;
   };
 }
 
@@ -92,7 +93,7 @@ export const getAllMessages = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { userId, topicId, limit, offset } = req.query;
+    const { userId, topicId, limit, offset } = req.query as { userId?: string; topicId?: string; limit?: string; offset?: string };
     
     let queryStr = `
       SELECT 
@@ -193,7 +194,7 @@ export const getAllLiteracySurveyResponses = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { userId } = req.query;
+    const { userId } = req.query as { userId?: string };
     
     let queryStr = `
       SELECT 
@@ -247,7 +248,7 @@ export const getAllPostTopicSurveyResponses = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { userId, topicId } = req.query;
+    const { userId, topicId } = req.query as { userId?: string; topicId?: string };
     
     let queryStr = `
       SELECT 
@@ -312,7 +313,7 @@ export const getUserData = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { userId } = req.params;
+    const { userId } = req.params as { userId: string };
     
     if (!userId) {
       throw new ValidationError('User ID is required');
