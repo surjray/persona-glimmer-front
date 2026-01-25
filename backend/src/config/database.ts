@@ -43,7 +43,7 @@ export const query = async (text: string, params?: any[]) => {
 
 export const getClient = async () => {
   const client = await pool.connect();
-  const query = client.query.bind(client);
+  const originalQuery = client.query.bind(client);
   const release = client.release.bind(client);
   
   // Set a timeout of 5 seconds, after which we will log this client's last query
@@ -52,10 +52,14 @@ export const getClient = async () => {
   }, 5000);
   
   // Monkey patch the query method to log the last query
-  client.query = (text: any, params?: any[]) => {
+  // Create a wrapper that preserves all overloads by using type assertion
+  const patchedQuery: typeof client.query = ((...args: any[]) => {
     clearTimeout(timeout);
-    return query(text, params);
-  };
+    // Call original query with all arguments - use any to bypass type checking for overloads
+    return (originalQuery as any)(...args);
+  }) as typeof client.query;
+  
+  client.query = patchedQuery;
   
   client.release = () => {
     clearTimeout(timeout);
