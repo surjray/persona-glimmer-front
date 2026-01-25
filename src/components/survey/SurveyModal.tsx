@@ -66,9 +66,11 @@ export function SurveyModal({ title, description, questions, onSubmit, onClose }
             </div>
             <div className="text-right">
               <span className="text-sm font-medium text-primary">
-                {answeredCount} / {questions.length}
+                Question {Math.min(answeredCount + 1, questions.length)} of {questions.length}
               </span>
-              <p className="text-xs text-muted-foreground">questions answered</p>
+              <p className="text-xs text-muted-foreground">
+                {answeredCount} / {questions.length} answered
+              </p>
             </div>
           </div>
           <Progress value={progress} className="mt-4 h-2" />
@@ -81,15 +83,20 @@ export function SurveyModal({ title, description, questions, onSubmit, onClose }
               return (
                 <div key={question.id} className="space-y-4 animate-fade-in">
                   <div className="flex items-start gap-3">
-                    <span className="flex-shrink-0 w-7 h-7 rounded-full bg-secondary flex items-center justify-center text-sm font-medium">
+                    <span className="flex-shrink-0 w-7 h-7 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-medium border-2 border-primary/20">
                       {globalIndex}
                     </span>
                     <div className="flex-1">
-                      {question.category && (
-                        <span className="text-xs font-medium text-primary uppercase tracking-wide">
-                          {question.category}
+                      <div className="flex items-center gap-2 mb-1">
+                        {question.category && (
+                          <span className="text-xs font-medium text-primary uppercase tracking-wide">
+                            {question.category}
+                          </span>
+                        )}
+                        <span className="text-xs text-muted-foreground">
+                          Question {globalIndex} of {questions.length}
                         </span>
-                      )}
+                      </div>
                       <p className="text-foreground mt-1">{question.text}</p>
                     </div>
                     {responses[question.id] && (

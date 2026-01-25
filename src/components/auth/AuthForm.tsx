@@ -6,10 +6,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { GraduationCap, Mail, Lock, ArrowRight } from 'lucide-react';
 
 interface AuthFormProps {
-  onSubmit: (email: string, password: string) => void;
+  onSubmit: (email: string, password: string, isLogin: boolean) => void;
+  onForgotPassword: () => void;
 }
 
-export function AuthForm({ onSubmit }: AuthFormProps) {
+export function AuthForm({ onSubmit, onForgotPassword }: AuthFormProps) {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -35,7 +36,7 @@ export function AuthForm({ onSubmit }: AuthFormProps) {
       return;
     }
 
-    onSubmit(email, password);
+    onSubmit(email, password, isLogin);
   };
 
   return (
@@ -119,6 +120,18 @@ export function AuthForm({ onSubmit }: AuthFormProps) {
                 <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </Button>
             </form>
+
+            {isLogin && (
+              <div className="mt-4 text-center">
+                <button
+                  type="button"
+                  onClick={onForgotPassword}
+                  className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                >
+                  Forgot your password?
+                </button>
+              </div>
+            )}
 
             <div className="mt-6 text-center">
               <button

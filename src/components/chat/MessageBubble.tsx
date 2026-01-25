@@ -2,6 +2,42 @@ import { Message } from '@/types';
 import { ThumbsUp, ThumbsDown, User, Bot } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+function formatTimestamp(timestamp: Date): string {
+  const now = new Date();
+  const messageTime = new Date(timestamp);
+  const diffInSeconds = Math.floor((now.getTime() - messageTime.getTime()) / 1000);
+
+  // Less than 1 minute ago
+  if (diffInSeconds < 60) {
+    return 'just now';
+  }
+
+  // Less than 1 hour ago
+  if (diffInSeconds < 3600) {
+    const minutes = Math.floor(diffInSeconds / 60);
+    return `${minutes}m ago`;
+  }
+
+  // Less than 24 hours ago
+  if (diffInSeconds < 86400) {
+    const hours = Math.floor(diffInSeconds / 3600);
+    return `${hours}h ago`;
+  }
+
+  // Same day
+  if (messageTime.toDateString() === now.toDateString()) {
+    return messageTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  }
+
+  // Different day - show date and time
+  return messageTime.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
 interface MessageBubbleProps {
   message: Message;
   onFeedback?: (messageId: string, feedback: 'positive' | 'negative') => void;
@@ -33,10 +69,15 @@ export function MessageBubble({ message, onFeedback, agentName = 'Agent' }: Mess
       </div>
 
       <div className="space-y-1">
-        {/* Sender name */}
-        <p className={cn('text-xs text-muted-foreground', isUser && 'text-right')}>
-          {isUser ? 'You' : agentName}
-        </p>
+        {/* Sender name and timestamp */}
+        <div className={cn('flex items-center gap-2', isUser && 'flex-row-reverse')}>
+          <p className={cn('text-xs text-muted-foreground')}>
+            {isUser ? 'You' : agentName}
+          </p>
+          <span className={cn('text-xs text-muted-foreground/70')}>
+            {formatTimestamp(message.timestamp)}
+          </span>
+        </div>
 
         {/* Message bubble */}
         <div className={cn(isUser ? 'chat-bubble-user' : 'chat-bubble-agent')}>

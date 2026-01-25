@@ -3,6 +3,7 @@ import { Message, Topic, Agent } from '@/types';
 import { MessageBubble } from './MessageBubble';
 import { MessageInput } from './MessageInput';
 import { TopicHeader } from './TopicHeader';
+import { TypingIndicator } from './TypingIndicator';
 import { MessageSquareText } from 'lucide-react';
 
 interface ChatWindowProps {
@@ -16,6 +17,7 @@ interface ChatWindowProps {
   onSendMessage: (content: string) => void;
   onFeedback: (messageId: string, feedback: 'positive' | 'negative') => void;
   onShowPolicy: () => void;
+  isAgentTyping?: boolean;
 }
 
 export function ChatWindow({
@@ -29,6 +31,7 @@ export function ChatWindow({
   onSendMessage,
   onFeedback,
   onShowPolicy,
+  isAgentTyping = false,
 }: ChatWindowProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -62,14 +65,17 @@ export function ChatWindow({
             </p>
           </div>
         ) : (
-          messages.map((message) => (
-            <MessageBubble
-              key={message.id}
-              message={message}
-              onFeedback={message.role === 'agent' ? onFeedback : undefined}
-              agentName={agent.name}
-            />
-          ))
+          <>
+            {messages.map((message) => (
+              <MessageBubble
+                key={message.id}
+                message={message}
+                onFeedback={message.role === 'agent' ? onFeedback : undefined}
+                agentName={agent.name}
+              />
+            ))}
+            {isAgentTyping && <TypingIndicator />}
+          </>
         )}
         <div ref={messagesEndRef} />
       </div>

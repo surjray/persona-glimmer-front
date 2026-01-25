@@ -34,7 +34,7 @@ export function TopicHeader({
             </span>
           </div>
           <h2 className="text-lg font-semibold text-foreground truncate">{topic.title}</h2>
-          <p className="text-sm text-muted-foreground mt-0.5">{topic.description}</p>
+          <p className="text-sm text-muted-foreground mt-0.5">{topic.stimulusText || topic.description}</p>
         </div>
 
         {/* Agent info and actions */}
@@ -44,7 +44,12 @@ export function TopicHeader({
               <User className="w-4 h-4 text-muted-foreground" />
               <span className="text-sm font-medium">{agent.name}</span>
             </div>
-            <p className="text-xs text-muted-foreground mt-0.5">{agent.description}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {agent.description || 
+                (agent.emotionalIntelligence !== undefined && agent.cognitiveIntelligence !== undefined
+                  ? `EQ: ${agent.emotionalIntelligence}/10, IQ: ${agent.cognitiveIntelligence}/10`
+                  : 'Customer Service Agent')}
+            </p>
           </div>
           <Button variant="outline" size="sm" onClick={onShowPolicy}>
             <Info className="w-4 h-4 mr-1" />

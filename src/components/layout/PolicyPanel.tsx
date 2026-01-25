@@ -43,7 +43,7 @@ export function PolicyPanel({ topic, guardrails, onClose }: PolicyPanelProps) {
                 <div className="bg-card rounded-lg border p-4">
                   <h4 className="font-medium text-sm text-primary mb-2">{topic.title}</h4>
                   <p className="text-sm text-muted-foreground leading-relaxed">
-                    {topic.policyText}
+                    {topic.policyText || 'Topic-specific policy guidelines are applied by the agent during conversations.'}
                   </p>
                 </div>
               </section>
@@ -98,7 +98,7 @@ export function PolicyPanel({ topic, guardrails, onClose }: PolicyPanelProps) {
                 </div>
                 <div className="bg-secondary/50 rounded-lg p-4">
                   <p className="text-sm text-muted-foreground">
-                    You are interacting with a customer service agent regarding: <span className="font-medium text-foreground">{topic.description}</span>
+                    You are interacting with a customer service agent regarding: <span className="font-medium text-foreground">{topic.stimulusText || topic.description || topic.title}</span>
                   </p>
                   <p className="text-sm text-muted-foreground mt-2">
                     The agent should follow the topic policy guidelines while maintaining adherence to global service guardrails.

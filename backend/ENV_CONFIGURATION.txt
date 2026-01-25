@@ -1,0 +1,94 @@
+===========================================
+ENVIRONMENT CONFIGURATION GUIDE
+===========================================
+
+Your generated JWT Secret:
+7d9a63242bf1fcfe6e2511d7c151c8e561c81bd019c8b820c8ffceb45f400400
+
+===========================================
+UPDATE YOUR .env FILE WITH THESE VALUES:
+===========================================
+
+1. DATABASE_URL
+   Format: postgresql://username:password@host:port/database
+   
+   For local PostgreSQL:
+   DATABASE_URL=postgresql://postgres:yourpassword@localhost:5432/research_chat_platform
+   
+   For Supabase:
+   DATABASE_URL=postgresql://postgres:[YOUR-PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres
+   
+   For Render:
+   DATABASE_URL=[Copy from Render dashboard]
+
+2. OPENAI_API_KEY
+   Get from: https://platform.openai.com/api-keys
+   Format: sk-...
+   OPENAI_API_KEY=sk-your-actual-key-here
+
+3. JWT_SECRET
+   Use this generated value:
+   JWT_SECRET=7d9a63242bf1fcfe6e2511d7c151c8e561c81bd019c8b820c8ffceb45f400400
+
+4. FRONTEND_URL
+   Default (usually correct):
+   FRONTEND_URL=http://localhost:5173
+
+5. PORT
+   Default (usually correct):
+   PORT=3000
+
+6. NODE_ENV
+   For development:
+   NODE_ENV=development
+
+===========================================
+QUICK SETUP OPTIONS:
+===========================================
+
+OPTION 1: Supabase (Easiest - Free)
+1. Go to https://supabase.com/
+2. Sign up and create new project
+3. Wait for database to provision
+4. Go to Settings > Database
+5. Copy "Connection string" > "URI"
+6. Replace [YOUR-PASSWORD] with your database password
+7. Paste into DATABASE_URL in .env
+
+OPTION 2: Install PostgreSQL Locally
+1. Download: https://www.postgresql.org/download/windows/
+2. Install with default settings
+3. Remember the postgres user password
+4. Open pgAdmin or psql
+5. Run: CREATE DATABASE research_chat_platform;
+6. Update DATABASE_URL with your password
+
+OPTION 3: Render PostgreSQL
+1. Go to https://render.com/
+2. Create account
+3. Create new PostgreSQL database
+4. Copy internal database URL
+5. Paste into DATABASE_URL in .env
+
+===========================================
+AFTER CONFIGURING .env:
+===========================================
+
+1. Test connection:
+   cd backend
+   npm run dev
+   
+   Should see: "Connected to PostgreSQL database"
+
+2. Run migrations:
+   npm run migrate
+
+3. Seed data:
+   npm run seed
+
+4. Start server:
+   npm run dev
+
+Server will be available at: http://localhost:3000
+
+===========================================

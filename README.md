@@ -1,4 +1,38 @@
-# Welcome to your Lovable project
+# Research-Focused Chat Platform
+
+A research-focused chat platform where users interact with one of 9 predefined service agents across 20 topics, complete surveys, and have all interactions logged for later analysis.
+
+## 📚 Documentation
+
+- **[Product Requirements Document (PRD)](./PRD.md)** - Complete project overview and requirements
+- **[Backend Implementation Plan](./docs/BACKEND_IMPLEMENTATION.md)** - Detailed backend development guide
+- **[API Documentation](./docs/API_DOCUMENTATION.md)** - Complete API reference
+- **[Admin API Documentation](./docs/ADMIN_API_DOCUMENTATION.md)** - Admin endpoints for data access and analysis
+- **[Database Schema](./docs/DATABASE_SCHEMA.md)** - Database structure and relationships
+
+## Project Overview
+
+This is a research V1 system that prioritizes correctness of flow over polish. The platform enables:
+
+- **User Authentication** - Email/password authentication with persistent agent assignment
+- **Agent Interactions** - Chat with one of 9 predefined agents across 20 topics
+- **Survey System** - AI literacy survey (one-time) and post-topic surveys (16 questions each)
+- **Data Logging** - All interactions logged for research analysis
+- **Topic Progression** - Sequential topic unlocking after survey completion
+
+## Tech Stack
+
+### Frontend (Current)
+- Vite + TypeScript + React
+- shadcn-ui + Tailwind CSS
+- React Router
+- TanStack Query
+
+### Backend (To Be Built)
+- Node.js + Express
+- PostgreSQL
+- OpenAI API (ChatGPT)
+- Deployed on Render
 
 ## Project info
 

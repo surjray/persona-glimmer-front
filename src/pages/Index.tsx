@@ -1,129 +1,492 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { AuthForm } from '@/components/auth/AuthForm';
+import { ForgotPasswordForm } from '@/components/auth/ForgotPasswordForm';
+import { AgentIntroduction } from '@/components/auth/AgentIntroduction';
 import { SurveyModal } from '@/components/survey/SurveyModal';
 import { ChatWindow } from '@/components/chat/ChatWindow';
 import { PolicyPanel } from '@/components/layout/PolicyPanel';
-import { Message, SurveyResponse, AppState } from '@/types';
+import { Message, SurveyResponse, AppState, Agent, Topic } from '@/types';
 import {
-  agents,
-  topics,
   aiLiteracySurveyQuestions,
   postTopicSurveyQuestions,
   globalGuardrails,
-  mockAgentResponses,
 } from '@/data/mockData';
 import { Button } from '@/components/ui/button';
-import { LogOut, GraduationCap } from 'lucide-react';
+import { LogOut, GraduationCap, Loader2 } from 'lucide-react';
+import { ProgressBar } from '@/components/layout/ProgressBar';
+import { TopicListModal } from '@/components/layout/TopicListModal';
+import { authApi, userApi, topicApi, chatApi, surveyApi, removeToken } from '@/lib/api';
+import { useToast } from '@/hooks/use-toast';
 
 const MAX_INTERACTIONS = 10;
 
-function generateId() {
-  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-}
-
 export default function Index() {
+  const { toast } = useToast();
   const [appState, setAppState] = useState<AppState>({
     currentView: 'auth',
     user: null,
     currentTopicIndex: 0,
-    currentAgent: agents[0],
+    currentAgent: null,
     interactionCount: 0,
     messages: [],
     showPostTopicSurvey: false,
   });
   
   const [showPolicyPanel, setShowPolicyPanel] = useState(false);
-  const [isNewUser, setIsNewUser] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [currentTopic, setCurrentTopic] = useState<Topic | null>(null);
+  const [allTopics, setAllTopics] = useState<Topic[]>([]);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [progress, setProgress] = useState({ completedTopics: 0, totalTopics: 20, completionPercentage: 0, totalInteractions: 0 });
+  const [showTopicList, setShowTopicList] = useState(false);
+  const [isAgentTyping, setIsAgentTyping] = useState(false);
+  const [showAgentIntroduction, setShowAgentIntroduction] = useState(false);
 
-  const currentTopic = topics[appState.currentTopicIndex];
-  const currentAgent = appState.currentAgent || agents[0];
+  // Handle auth failures globally
+  useEffect(() => {
+    const handleAuthFailed = () => {
+      removeToken();
+      setAppState({
+        currentView: 'auth',
+        user: null,
+        currentTopicIndex: 0,
+        currentAgent: null,
+        interactionCount: 0,
+        messages: [],
+        showPostTopicSurvey: false,
+      });
+      setCurrentTopic(null);
+      setAllTopics([]);
+      toast({
+        title: 'Session expired',
+        description: 'Please login again to continue',
+        variant: 'destructive',
+      });
+    };
+
+    window.addEventListener('auth-failed', handleAuthFailed);
+    return () => window.removeEventListener('auth-failed', handleAuthFailed);
+  }, [toast]);
+
+  // Load user state on mount if token exists
+  useEffect(() => {
+    const loadUserState = async () => {
+      try {
+        const token = localStorage.getItem('auth_token');
+        if (!token) {
+          setIsLoading(false);
+          return;
+        }
+
+        const stateResponse = await userApi.getState();
+        const { user, agent, currentTopic: topic, interactionStatus, progress: progressData } = stateResponse.data;
+        
+        // Set progress
+        if (progressData) {
+          setProgress(progressData);
+        }
+
+        // Convert agent from backend format
+        const agentData: Agent = {
+          id: agent.id,
+          name: agent.name,
+          emotionalIntelligence: agent.emotionalIntelligence,
+          cognitiveIntelligence: agent.cognitiveIntelligence,
+        };
+
+        // Convert topic from backend format
+        let topicData: Topic | null = null;
+        if (topic) {
+          topicData = {
+            id: topic.id,
+            title: topic.title,
+            stimulusText: topic.stimulusText,
+            order: topic.order,
+          };
+          setCurrentTopic(topicData);
+        }
+
+        // Load all topics
+        const topicsResponse = await topicApi.getAll();
+        const topicsList = topicsResponse.data.topics.map((t) => ({
+          id: t.id,
+          title: t.title,
+          stimulusText: t.stimulusText,
+          order: t.order,
+        }));
+        setAllTopics(topicsList);
+
+        // Load messages if we have a current topic
+        let messages: Message[] = [];
+        if (topic && topic.id) {
+          try {
+            const messagesResponse = await chatApi.getHistory(Number(topic.id));
+            messages = messagesResponse.data.messages.map((m) => ({
+              id: m.id,
+              content: m.content,
+              role: m.role,
+              timestamp: new Date(m.timestamp),
+            }));
+          } catch (error) {
+            console.error('Failed to load messages:', error);
+          }
+        }
+
+        setAppState({
+          currentView: user.hasCompletedLiteracySurvey ? 'chat' : 'literacy-survey',
+          user: {
+            id: user.id,
+            email: user.email,
+            assignedAgentId: user.assignedAgentId,
+            currentTopicIndex: user.currentTopicIndex,
+            hasCompletedLiteracySurvey: user.hasCompletedLiteracySurvey,
+          },
+          currentTopicIndex: user.currentTopicIndex || 0,
+          currentAgent: agentData,
+          interactionCount: interactionStatus?.interactionCount || 0,
+          messages,
+          showPostTopicSurvey: interactionStatus?.isLocked && !interactionStatus?.surveyCompleted,
+        });
+      } catch (error: any) {
+        console.error('Failed to load user state:', error);
+        // If token is invalid, clear it and redirect to auth
+        removeToken();
+        if (error.message?.includes('Session expired') || error.message?.includes('Invalid')) {
+          setAppState({
+            currentView: 'auth',
+            user: null,
+            currentTopicIndex: 0,
+            currentAgent: null,
+            interactionCount: 0,
+            messages: [],
+            showPostTopicSurvey: false,
+          });
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadUserState();
+  }, []);
 
   // Auth handlers
-  const handleAuth = (email: string, _password: string) => {
-    const isNew = !localStorage.getItem(`user-${email}`);
-    setIsNewUser(isNew);
-    
-    if (isNew) {
-      localStorage.setItem(`user-${email}`, 'registered');
+  const handleAuth = async (email: string, password: string, isLogin: boolean) => {
+    try {
+      setIsLoading(true);
+      let response;
+      
+      if (isLogin) {
+        response = await authApi.login(email, password);
+      } else {
+        response = await authApi.register(email, password);
+      }
+
+      const { user, agent, token } = response;
+
+      // Convert agent
+      const agentData: Agent = {
+        id: agent.id,
+        name: agent.name,
+        emotionalIntelligence: agent.emotionalIntelligence,
+        cognitiveIntelligence: agent.cognitiveIntelligence,
+      };
+
+      // Load topics
+      const topicsResponse = await topicApi.getAll();
+      const topicsList = topicsResponse.data.topics.map((t) => ({
+        id: t.id,
+        title: t.title,
+        stimulusText: t.stimulusText,
+        order: t.order,
+      }));
+      setAllTopics(topicsList);
+
+      // Get current topic
+      let topicData: Topic | null = null;
+      if (user.currentTopicIndex !== undefined) {
+        const currentTopicResponse = await topicApi.getCurrent();
+        const topic = currentTopicResponse.data.topic;
+        topicData = {
+          id: topic.id,
+          title: topic.title,
+          stimulusText: topic.stimulusText,
+          order: topic.order,
+        };
+        setCurrentTopic(topicData);
+      }
+
+      // Show agent introduction for new users only
+      if (!isLogin && !user.hasCompletedLiteracySurvey) {
+        setShowAgentIntroduction(true);
+        setAppState({
+          currentView: 'auth', // Keep on auth view until intro is done
+          user: {
+            id: user.id,
+            email: user.email,
+            assignedAgentId: user.assignedAgentId,
+            currentTopicIndex: user.currentTopicIndex,
+            hasCompletedLiteracySurvey: user.hasCompletedLiteracySurvey,
+          },
+          currentTopicIndex: user.currentTopicIndex || 0,
+          currentAgent: agentData,
+          interactionCount: 0,
+          messages: [],
+          showPostTopicSurvey: false,
+        });
+      } else {
+        setAppState({
+          currentView: user.hasCompletedLiteracySurvey ? 'chat' : 'literacy-survey',
+          user: {
+            id: user.id,
+            email: user.email,
+            assignedAgentId: user.assignedAgentId,
+            currentTopicIndex: user.currentTopicIndex,
+            hasCompletedLiteracySurvey: user.hasCompletedLiteracySurvey,
+          },
+          currentTopicIndex: user.currentTopicIndex || 0,
+          currentAgent: agentData,
+          interactionCount: 0,
+          messages: [],
+          showPostTopicSurvey: false,
+        });
+      }
+
+      toast({
+        title: isLogin ? 'Welcome back!' : 'Account created',
+        description: `You've been assigned to ${agent.name}`,
+      });
+    } catch (error: any) {
+      let errorTitle = 'Authentication failed';
+      let errorDescription = error.message || 'Please check your credentials and try again.';
+
+      // Provide more specific error messages
+      if (error.message?.includes('Too many')) {
+        errorTitle = 'Too many attempts';
+        errorDescription = 'Please wait a few minutes before trying again.';
+      } else if (error.message?.includes('already exists')) {
+        errorTitle = 'Email already registered';
+        errorDescription = 'This email is already in use. Please login or use a different email.';
+      } else if (error.message?.includes('Invalid email')) {
+        errorTitle = 'Invalid email format';
+        errorDescription = 'Please enter a valid email address.';
+      } else if (error.message?.includes('Password')) {
+        errorTitle = 'Password requirement not met';
+        errorDescription = 'Password must be at least 6 characters long.';
+      }
+
+      toast({
+        title: errorTitle,
+        description: errorDescription,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
     }
-    
-    setAppState((prev) => ({
-      ...prev,
-      currentView: isNew ? 'literacy-survey' : 'chat',
-      user: {
-        id: generateId(),
-        email,
-        hasCompletedLiteracySurvey: !isNew,
-      },
-    }));
   };
 
   const handleLogout = () => {
+    authApi.logout();
     setAppState({
       currentView: 'auth',
       user: null,
       currentTopicIndex: 0,
-      currentAgent: agents[0],
+      currentAgent: null,
       interactionCount: 0,
       messages: [],
       showPostTopicSurvey: false,
     });
+    setCurrentTopic(null);
+    setAllTopics([]);
   };
 
   // Survey handlers
-  const handleLiteracySurveySubmit = (_responses: SurveyResponse[]) => {
-    setAppState((prev) => ({
-      ...prev,
-      currentView: 'chat',
-      user: prev.user ? { ...prev.user, hasCompletedLiteracySurvey: true } : null,
-    }));
+  const handleLiteracySurveySubmit = async (responses: SurveyResponse[]) => {
+    try {
+      setIsLoading(true);
+      await surveyApi.submitLiteracy(responses);
+      
+      setAppState((prev) => ({
+        ...prev,
+        currentView: 'chat',
+        user: prev.user ? { ...prev.user, hasCompletedLiteracySurvey: true } : null,
+      }));
+
+      // Load current topic and messages
+      await loadCurrentTopicAndMessages();
+    } catch (error: any) {
+      let errorTitle = 'Failed to submit survey';
+      let errorDescription = error.message || 'Please try again.';
+
+      if (error.message?.includes('exactly')) {
+        errorTitle = 'Incomplete survey';
+        errorDescription = 'Please answer all questions before submitting.';
+      } else if (error.message?.includes('already completed')) {
+        errorTitle = 'Survey already submitted';
+        errorDescription = 'This survey has already been completed.';
+      } else if (error.message?.includes('not required yet')) {
+        errorTitle = 'Survey not available';
+        errorDescription = 'Please complete 10 interactions first.';
+      }
+
+      toast({
+        title: errorTitle,
+        description: errorDescription,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handlePostTopicSurveySubmit = (_responses: SurveyResponse[]) => {
-    // Move to next topic
-    const nextTopicIndex = appState.currentTopicIndex + 1;
-    const nextAgent = agents[nextTopicIndex % agents.length];
-    
-    setAppState((prev) => ({
-      ...prev,
-      currentTopicIndex: nextTopicIndex,
-      currentAgent: nextAgent,
-      interactionCount: 0,
-      messages: [],
-      showPostTopicSurvey: false,
-    }));
+  const handlePostTopicSurveySubmit = async (responses: SurveyResponse[]) => {
+    try {
+      setIsLoading(true);
+      if (!currentTopic) return;
+
+      const response = await surveyApi.submitPostTopic(Number(currentTopic.id), responses);
+      
+      // Load updated state
+      const stateResponse = await userApi.getState();
+      const { user, agent, currentTopic: topic, progress: progressData } = stateResponse.data;
+      
+      // Update progress
+      if (progressData) {
+        setProgress(progressData);
+      }
+
+      const agentData: Agent = {
+        id: agent.id,
+        name: agent.name,
+        emotionalIntelligence: agent.emotionalIntelligence,
+        cognitiveIntelligence: agent.cognitiveIntelligence,
+      };
+
+      let topicData: Topic | null = null;
+      if (topic) {
+        topicData = {
+          id: topic.id,
+          title: topic.title,
+          stimulusText: topic.stimulusText,
+          order: topic.order,
+        };
+        setCurrentTopic(topicData);
+      }
+
+      setAppState((prev) => ({
+        ...prev,
+        currentTopicIndex: user.currentTopicIndex || 0,
+        currentAgent: agentData,
+        interactionCount: 0,
+        messages: [],
+        showPostTopicSurvey: false,
+      }));
+
+      toast({
+        title: 'Survey submitted',
+        description: 'Moving to next topic...',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Failed to submit survey',
+        description: error.message || 'Please try again',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Load current topic and messages
+  const loadCurrentTopicAndMessages = async () => {
+    try {
+      const topicResponse = await topicApi.getCurrent();
+      const topic = topicResponse.data.topic;
+      const topicData: Topic = {
+        id: topic.id,
+        title: topic.title,
+        stimulusText: topic.stimulusText,
+        order: topic.order,
+      };
+      setCurrentTopic(topicData);
+
+      const messagesResponse = await chatApi.getHistory(Number(topic.id));
+      const messages: Message[] = messagesResponse.data.messages.map((m) => ({
+        id: m.id,
+        content: m.content,
+        role: m.role,
+        timestamp: new Date(m.timestamp),
+      }));
+
+      setAppState((prev) => ({
+        ...prev,
+        messages,
+        interactionCount: topicResponse.data.interactionCount,
+        showPostTopicSurvey: topicResponse.data.isLocked && !topicResponse.data.surveyCompleted,
+      }));
+    } catch (error) {
+      console.error('Failed to load topic and messages:', error);
+    }
   };
 
   // Chat handlers
-  const handleSendMessage = useCallback((content: string) => {
-    const userMessage: Message = {
-      id: generateId(),
-      content,
-      role: 'user',
-      timestamp: new Date(),
-    };
+  const handleSendMessage = useCallback(async (content: string) => {
+    if (!currentTopic) return;
 
-    // Simulate agent response
-    const agentResponse: Message = {
-      id: generateId(),
-      content: mockAgentResponses[Math.floor(Math.random() * mockAgentResponses.length)],
-      role: 'agent',
-      timestamp: new Date(),
-      feedback: null,
-    };
-
-    setAppState((prev) => {
-      const newInteractionCount = prev.interactionCount + 1;
-      const showSurvey = newInteractionCount >= MAX_INTERACTIONS;
+    try {
+      setIsAgentTyping(true);
       
-      return {
-        ...prev,
-        messages: [...prev.messages, userMessage, agentResponse],
-        interactionCount: newInteractionCount,
-        showPostTopicSurvey: showSurvey,
+      // Add user message immediately
+      const tempUserMessage: Message = {
+        id: `temp-${Date.now()}`,
+        content,
+        role: 'user',
+        timestamp: new Date(),
       };
-    });
-  }, []);
+
+      setAppState((prev) => ({
+        ...prev,
+        messages: [...prev.messages, tempUserMessage],
+      }));
+
+      const response = await chatApi.sendMessage(Number(currentTopic.id), content);
+      
+      const userMessage: Message = {
+        id: response.data.userMessage.id,
+        content: response.data.userMessage.content,
+        role: response.data.userMessage.role,
+        timestamp: new Date(response.data.userMessage.timestamp),
+      };
+
+      const agentMessage: Message = {
+        id: response.data.agentMessage.id,
+        content: response.data.agentMessage.content,
+        role: response.data.agentMessage.role,
+        timestamp: new Date(response.data.agentMessage.timestamp),
+      };
+
+      // Replace temp message with real one and add agent message
+      setAppState((prev) => ({
+        ...prev,
+        messages: [...prev.messages.filter(m => m.id !== tempUserMessage.id), userMessage, agentMessage],
+        interactionCount: response.data.interactionCount,
+        showPostTopicSurvey: response.data.shouldShowSurvey,
+      }));
+    } catch (error: any) {
+      // Remove temp message on error
+      setAppState((prev) => ({
+        ...prev,
+        messages: prev.messages.filter(m => !m.id.startsWith('temp-')),
+      }));
+      toast({
+        title: 'Failed to send message',
+        description: error.message || 'Please try again',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsAgentTyping(false);
+    }
+  }, [currentTopic, toast]);
 
   const handleFeedback = useCallback((messageId: string, feedback: 'positive' | 'negative') => {
     setAppState((prev) => ({
@@ -134,9 +497,43 @@ export default function Index() {
     }));
   }, []);
 
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   // Render based on current view
   if (appState.currentView === 'auth') {
-    return <AuthForm onSubmit={handleAuth} />;
+    if (showAgentIntroduction && appState.currentAgent) {
+      return (
+        <AgentIntroduction
+          agent={appState.currentAgent}
+          onContinue={() => {
+            setShowAgentIntroduction(false);
+            setAppState((prev) => ({
+              ...prev,
+              currentView: 'literacy-survey',
+            }));
+          }}
+        />
+      );
+    }
+    if (showForgotPassword) {
+      return <ForgotPasswordForm onBack={() => setShowForgotPassword(false)} />;
+    }
+    return (
+      <AuthForm
+        onSubmit={(email, password, isLogin) => handleAuth(email, password, isLogin)}
+        onForgotPassword={() => setShowForgotPassword(false)}
+      />
+    );
   }
 
   if (appState.currentView === 'literacy-survey') {
@@ -153,44 +550,117 @@ export default function Index() {
   }
 
   // Check if all topics completed
-  if (appState.currentTopicIndex >= topics.length) {
+  if (appState.currentTopicIndex >= allTopics.length || progress.completedTopics >= progress.totalTopics) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <div className="text-center max-w-md animate-fade-in">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-accent/20 mb-6">
-            <GraduationCap className="w-10 h-10 text-accent" />
+        <div className="text-center max-w-2xl animate-fade-in">
+          <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-accent/20 mb-6">
+            <GraduationCap className="w-12 h-12 text-accent" />
           </div>
-          <h1 className="text-2xl font-bold text-foreground mb-2">Study Complete!</h1>
-          <p className="text-muted-foreground mb-6">
-            Thank you for participating in this research study. You have completed all {topics.length} conversation topics.
+          <h1 className="text-3xl font-bold text-foreground mb-3">Study Complete!</h1>
+          <p className="text-lg text-muted-foreground mb-8">
+            Thank you for participating in this research study. Your contributions help us understand how different agent personalities affect customer service experiences.
           </p>
-          <Button onClick={handleLogout}>
-            Return to Login
-          </Button>
+
+          {/* Statistics */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div className="bg-card border rounded-lg p-4">
+              <div className="text-2xl font-bold text-primary mb-1">{progress.completedTopics}</div>
+              <div className="text-sm text-muted-foreground">Topics Completed</div>
+            </div>
+            <div className="bg-card border rounded-lg p-4">
+              <div className="text-2xl font-bold text-primary mb-1">{progress.totalInteractions}</div>
+              <div className="text-sm text-muted-foreground">Total Interactions</div>
+            </div>
+            <div className="bg-card border rounded-lg p-4">
+              <div className="text-2xl font-bold text-primary mb-1">{progress.totalTopics}</div>
+              <div className="text-sm text-muted-foreground">Total Topics</div>
+            </div>
+            <div className="bg-card border rounded-lg p-4">
+              <div className="text-2xl font-bold text-primary mb-1">{progress.completionPercentage}%</div>
+              <div className="text-sm text-muted-foreground">Completion Rate</div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              You've successfully completed all conversation topics with {appState.currentAgent?.name || 'your assigned agent'}.
+              All your interactions and survey responses have been recorded for research analysis.
+            </p>
+            <Button onClick={handleLogout} size="lg">
+              Return to Login
+            </Button>
+          </div>
         </div>
       </div>
     );
   }
 
   // Main chat view
+  if (!currentTopic || !appState.currentAgent) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">Loading topic...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="h-screen flex flex-col bg-background">
       {/* Top navigation bar */}
-      <header className="h-14 border-b bg-card flex items-center justify-between px-6">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-            <GraduationCap className="w-4 h-4 text-primary-foreground" />
+      <header className="border-b bg-card">
+        <div className="h-14 flex items-center justify-between px-6">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+              <GraduationCap className="w-4 h-4 text-primary-foreground" />
+            </div>
+            <span className="font-semibold">Research Platform</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowTopicList(true)}
+              className="ml-4"
+            >
+              View All Topics
+            </Button>
           </div>
-          <span className="font-semibold">Research Platform</span>
+          <div className="flex items-center gap-4">
+            {/* Agent EQ/IQ Info */}
+            {appState.currentAgent && (
+              <div className="hidden md:flex items-center gap-3 px-3 py-1.5 bg-muted/50 rounded-lg">
+                <div className="text-xs">
+                  <span className="font-medium text-foreground">{appState.currentAgent.name}</span>
+                  {appState.currentAgent.emotionalIntelligence !== undefined && appState.currentAgent.cognitiveIntelligence !== undefined && (
+                    <span className="text-muted-foreground ml-2">
+                      EQ: {appState.currentAgent.emotionalIntelligence}/10 • IQ: {appState.currentAgent.cognitiveIntelligence}/10
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+            {/* Progress percentage badge */}
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-primary/10 rounded-lg">
+              <span className="text-sm font-semibold text-primary">
+                {progress.completionPercentage}%
+              </span>
+              <span className="text-xs text-muted-foreground">Complete</span>
+            </div>
+            <span className="text-sm text-muted-foreground">
+              {appState.user?.email}
+            </span>
+            <Button variant="ghost" size="sm" onClick={handleLogout}>
+              <LogOut className="w-4 h-4 mr-2" />
+              Logout
+            </Button>
+          </div>
         </div>
-        <div className="flex items-center gap-4">
-          <span className="text-sm text-muted-foreground">
-            {appState.user?.email}
-          </span>
-          <Button variant="ghost" size="sm" onClick={handleLogout}>
-            <LogOut className="w-4 h-4 mr-2" />
-            Logout
-          </Button>
+        {/* Progress bar */}
+        <div className="h-12 px-6 border-t bg-muted/30 flex items-center">
+          <ProgressBar
+            completedTopics={progress.completedTopics}
+            totalTopics={progress.totalTopics}
+            completionPercentage={progress.completionPercentage}
+          />
         </div>
       </header>
 
@@ -198,20 +668,21 @@ export default function Index() {
       <div className="flex-1 overflow-hidden">
         <ChatWindow
           topic={currentTopic}
-          agent={currentAgent}
+          agent={appState.currentAgent}
           messages={appState.messages}
           interactionCount={appState.interactionCount}
           maxInteractions={MAX_INTERACTIONS}
           topicNumber={appState.currentTopicIndex + 1}
-          totalTopics={topics.length}
+          totalTopics={allTopics.length}
           onSendMessage={handleSendMessage}
           onFeedback={handleFeedback}
           onShowPolicy={() => setShowPolicyPanel(true)}
+          isAgentTyping={isAgentTyping}
         />
       </div>
 
       {/* Policy panel */}
-      {showPolicyPanel && (
+      {showPolicyPanel && currentTopic && (
         <PolicyPanel
           topic={currentTopic}
           guardrails={globalGuardrails}
@@ -220,12 +691,20 @@ export default function Index() {
       )}
 
       {/* Post-topic survey modal */}
-      {appState.showPostTopicSurvey && (
+      {appState.showPostTopicSurvey && currentTopic && appState.currentAgent && (
         <SurveyModal
           title="Topic Evaluation"
-          description={`Please rate your experience with ${currentAgent.name} on the topic "${currentTopic.title}".`}
+          description={`Please rate your experience with ${appState.currentAgent.name} on the topic "${currentTopic.title}".`}
           questions={postTopicSurveyQuestions}
           onSubmit={handlePostTopicSurveySubmit}
+        />
+      )}
+
+      {/* Topic list modal */}
+      {showTopicList && (
+        <TopicListModal
+          currentTopicIndex={appState.currentTopicIndex}
+          onClose={() => setShowTopicList(false)}
         />
       )}
     </div>

@@ -1,21 +1,26 @@
 export interface User {
   id: string;
   email: string;
+  assignedAgentId?: number;
+  currentTopicIndex?: number;
   hasCompletedLiteracySurvey: boolean;
 }
 
 export interface Agent {
-  id: string;
+  id: number | string;
   name: string;
-  description: string;
+  description?: string;
   avatar?: string;
+  emotionalIntelligence?: number;
+  cognitiveIntelligence?: number;
 }
 
 export interface Topic {
-  id: string;
+  id: number | string;
   title: string;
-  description: string;
-  policyText: string;
+  description?: string;
+  stimulusText?: string;
+  policyText?: string;
   order: number;
 }
 
