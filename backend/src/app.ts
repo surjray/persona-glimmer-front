@@ -48,14 +48,33 @@ app.use(
         }
       }
       
-      // In production, use FRONTEND_URL or default
-      const allowedOrigins = [
+      // In production, automatically allow Netlify domains
+      if (process.env.NODE_ENV === 'production') {
+        // Automatically allow any Netlify domain
+        if (origin.includes('.netlify.app')) {
+          return callback(null, true);
+        }
+        
+        // Allow FRONTEND_URL if set
+        if (process.env.FRONTEND_URL && origin === process.env.FRONTEND_URL) {
+          return callback(null, true);
+        }
+        
+        // If FRONTEND_URL is set but origin doesn't match, reject
+        if (process.env.FRONTEND_URL) {
+          return callback(new Error('Not allowed by CORS'));
+        }
+      }
+      
+      // Fallback for development or if no production check matched
+      const defaultOrigins = [
         process.env.FRONTEND_URL || 'http://localhost:5173',
-        'http://localhost:8083', // Add your current frontend port
+        'http://localhost:8083',
+        'http://localhost:8080',
         'http://localhost:5173',
       ];
       
-      if (allowedOrigins.includes(origin)) {
+      if (defaultOrigins.includes(origin)) {
         callback(null, true);
       } else {
         callback(new Error('Not allowed by CORS'));

@@ -1,0 +1,24 @@
+# Render Blueprint Configuration
+# This file can be used to deploy services via Render Blueprint
+# Or use the manual steps in RENDER_DEPLOYMENT_GUIDE.md
+
+services:
+  - type: web
+    name: persona-glimmer-backend
+    env: node
+    region: oregon
+    rootDir: backend
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      # Add these in Render dashboard after creating service:
+      # DATABASE_URL - Your Render PostgreSQL connection string
+      # OPENAI_API_KEY - Your OpenAI API key
+      # JWT_SECRET - Your JWT secret
+      # FRONTEND_URL - Your Netlify site URL
+      # ADMIN_API_KEY - Optional admin API key
