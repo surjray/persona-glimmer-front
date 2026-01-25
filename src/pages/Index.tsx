@@ -260,8 +260,15 @@ export default function Index() {
       let errorTitle = 'Authentication failed';
       let errorDescription = error.message || 'Please check your credentials and try again.';
 
-      // Provide more specific error messages
-      if (error.message?.includes('Too many')) {
+      // Distinguish between connection errors and authentication errors
+      if (error.message?.includes('Unable to connect') || 
+          error.message?.includes('Backend service') || 
+          error.message?.includes('temporarily unavailable') ||
+          error.message?.includes('starting up') ||
+          error.message?.includes('timed out')) {
+        errorTitle = 'Service temporarily unavailable';
+        errorDescription = error.message || 'The backend service may be starting up. Please wait a moment and try again.';
+      } else if (error.message?.includes('Too many')) {
         errorTitle = 'Too many attempts';
         errorDescription = 'Please wait a few minutes before trying again.';
       } else if (error.message?.includes('already exists')) {
@@ -273,6 +280,11 @@ export default function Index() {
       } else if (error.message?.includes('Password')) {
         errorTitle = 'Password requirement not met';
         errorDescription = 'Password must be at least 6 characters long.';
+      } else if (error.message?.includes('Invalid credentials') || 
+                 error.message?.includes('incorrect') ||
+                 error.message?.includes('not found')) {
+        errorTitle = 'Authentication failed';
+        errorDescription = 'Invalid email or password. Please check your credentials and try again.';
       }
 
       toast({

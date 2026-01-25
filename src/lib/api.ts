@@ -7,6 +7,43 @@ if (import.meta.env.DEV) {
   console.log('API Base URL:', API_BASE_URL);
 }
 
+// Health check function to verify backend is available
+async function checkBackendHealth(timeoutMs: number = 10000): Promise<boolean> {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    
+    const response = await fetch(`${API_BASE_URL}/health`, {
+      method: 'GET',
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    clearTimeout(timeoutId);
+    return response.ok;
+  } catch (error: any) {
+    // Network error, timeout, or CORS - backend is not available
+    return false;
+  }
+}
+
+// Wait for backend to be available (for Render cold starts)
+async function waitForBackend(maxWaitMs: number = 30000, checkIntervalMs: number = 2000): Promise<boolean> {
+  const startTime = Date.now();
+  
+  while (Date.now() - startTime < maxWaitMs) {
+    if (await checkBackendHealth(5000)) {
+      return true;
+    }
+    // Wait before checking again
+    await new Promise(resolve => setTimeout(resolve, checkIntervalMs));
+  }
+  
+  return false;
+}
+
 export interface ApiResponse<T> {
   success: boolean;
   data: T;
@@ -34,7 +71,8 @@ export const removeToken = (): void => {
 // API request helper
 async function apiRequest<T>(
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  skipHealthCheck: boolean = false
 ): Promise<ApiResponse<T>> {
   const token = getToken();
   
@@ -48,38 +86,91 @@ async function apiRequest<T>(
   }
 
   try {
+    // For auth endpoints, check backend health first (unless explicitly skipped)
+    // Skip health check for the health endpoint itself to avoid infinite loop
+    if (!skipHealthCheck && endpoint.includes('/auth/') && endpoint !== '/health') {
+      const isHealthy = await checkBackendHealth(5000);
+      if (!isHealthy) {
+        // Backend might be waking up, wait a bit longer
+        const backendAvailable = await waitForBackend(25000, 2000);
+        if (!backendAvailable) {
+          throw new Error(
+            'Backend service is temporarily unavailable. This may be due to the service waking up. Please try again in a few moments.'
+          );
+        }
+      }
+    }
+
     const url = `${API_BASE_URL}${endpoint}`;
     if (import.meta.env.DEV) {
       console.log('API Request:', url, options.method || 'GET');
     }
     
-    // Use retry for network errors, but handle response errors separately
+    // Use retry for network errors and server errors (502, 503, 504)
     let response: Response;
     try {
       response = await retry(
         async () => {
-          const res = await fetch(url, {
-            ...options,
-            headers,
-          });
-          // Don't throw on HTTP errors here, let the code below handle them
-          return res;
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+          
+          try {
+            const res = await fetch(url, {
+              ...options,
+              headers,
+              signal: controller.signal,
+            });
+            clearTimeout(timeoutId);
+            
+            // Retry on 502, 503, 504 (service unavailable, gateway errors)
+            if (res.status === 502 || res.status === 503 || res.status === 504) {
+              throw new Error(`Server error ${res.status}: Service may be starting up`);
+            }
+            
+            return res;
+          } catch (fetchError: any) {
+            clearTimeout(timeoutId);
+            throw fetchError;
+          }
         },
         {
-          maxRetries: 3,
-          delay: 1000,
+          maxRetries: 5, // More retries for cold starts
+          delay: 2000, // Start with 2 second delay
           backoff: true,
-          retryable: (error) => {
-            // Only retry on network errors
-            return error.name === 'TypeError' && error.message.includes('fetch');
+          retryable: (error: any) => {
+            // Retry on network errors, timeouts, and server errors
+            if (error.name === 'TypeError' && error.message.includes('fetch')) {
+              return true;
+            }
+            if (error.name === 'AbortError') {
+              return true; // Timeout
+            }
+            if (error.message?.includes('502') || error.message?.includes('503') || error.message?.includes('504')) {
+              return true;
+            }
+            // CORS errors might indicate backend is down
+            if (error.message?.includes('CORS') || error.message?.includes('Failed to fetch')) {
+              return true;
+            }
+            return false;
           },
         }
       );
     } catch (error: any) {
-      // If retry failed, it's a network error
-      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      // If retry failed, provide helpful error message
+      if (error.name === 'TypeError' && (error.message.includes('fetch') || error.message.includes('Failed to fetch'))) {
         throw new Error(
-          `Failed to connect to server. Please ensure the backend is running at ${API_BASE_URL}`
+          'Unable to connect to the server. The backend service may be starting up. Please wait a moment and try again.'
+        );
+      }
+      if (error.name === 'AbortError') {
+        throw new Error(
+          'Request timed out. The backend service may be taking longer than usual to respond. Please try again.'
+        );
+      }
+      if (error.message?.includes('502') || error.message?.includes('503') || error.message?.includes('504')) {
+        throw new Error(
+          'Backend service is temporarily unavailable. It may be starting up. Please wait a moment and try again.'
         );
       }
       throw error;
@@ -140,16 +231,14 @@ async function apiRequest<T>(
     const data = await response.json();
     return data;
   } catch (error: any) {
-    // Handle network errors (CORS, connection refused, etc.)
-    if (error.name === 'TypeError' && error.message.includes('fetch')) {
-      throw new Error(
-        `Failed to connect to server. Please ensure the backend is running at ${API_BASE_URL}`
-      );
-    }
-    // Re-throw other errors
+    // Re-throw errors that were already handled above
     throw error;
   }
 }
+
+// Export health check for use in components
+export const healthCheck = checkBackendHealth;
+export const waitForBackendReady = waitForBackend;
 
 // Auth API
 export const authApi = {

@@ -14,11 +14,18 @@ export async function retry<T>(
     delay = 1000,
     backoff = true,
     retryable = (error) => {
-      // Retry on network errors or 5xx errors
-      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      // Retry on network errors, timeouts, or 5xx errors
+      if (error.name === 'TypeError' && (error.message.includes('fetch') || error.message.includes('Failed to fetch'))) {
         return true;
       }
-      if (error.message?.includes('500') || error.message?.includes('502') || error.message?.includes('503')) {
+      if (error.name === 'AbortError') {
+        return true; // Timeout errors
+      }
+      if (error.message?.includes('500') || error.message?.includes('502') || error.message?.includes('503') || error.message?.includes('504')) {
+        return true;
+      }
+      // CORS errors might indicate backend is down
+      if (error.message?.includes('CORS')) {
         return true;
       }
       return false;
