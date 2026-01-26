@@ -43,24 +43,35 @@ export class OpenAIService {
       // Add current user message
       messages.push({ role: 'user', content: userMessage });
 
-      // Call OpenAI API
-      const completion = await openai.chat.completions.create({
-        model: DEFAULT_MODEL,
-        messages: messages,
-        temperature: 0.7,
-        max_tokens: 500,
-        presence_penalty: 0.1,
-        frequency_penalty: 0.1,
-      });
+      // Call OpenAI API with timeout protection
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('OpenAI API request timeout')), 30000)
+      );
+      
+      const completion = await Promise.race([
+        openai.chat.completions.create({
+          model: DEFAULT_MODEL,
+          messages: messages,
+          temperature: 0.7,
+          max_tokens: 500,
+          presence_penalty: 0.1,
+          frequency_penalty: 0.1,
+        }),
+        timeoutPromise
+      ]) as any;
 
       const response = completion.choices[0]?.message?.content;
 
       if (!response || response.trim().length === 0) {
-        console.error('OpenAI returned empty response:', {
-          choices: completion.choices,
-          model: DEFAULT_MODEL,
-          usage: completion.usage,
-        });
+        // Log minimal info in production
+        if (process.env.NODE_ENV === 'development') {
+          console.error('OpenAI returned empty response:', {
+            model: DEFAULT_MODEL,
+            usage: completion.usage,
+          });
+        } else {
+          console.error('OpenAI returned empty response');
+        }
         // Return a fallback response instead of throwing
         return "I understand your question. Let me help you with that. Could you provide a bit more detail so I can assist you better?";
       }
@@ -76,14 +87,18 @@ export class OpenAIService {
 
       return response;
     } catch (error: any) {
-      // Enhanced error logging
-      console.error('OpenAI API error:', {
-        name: error.name,
-        message: error.message,
-        status: error.status,
-        code: error.code,
-        response: error.response?.data,
-      });
+      // Log error details only in development
+      if (process.env.NODE_ENV === 'development') {
+        console.error('OpenAI API error:', {
+          name: error.name,
+          message: error.message,
+          status: error.status,
+          code: error.code,
+        });
+      } else {
+        // In production, log minimal info
+        console.error('OpenAI API error:', error.name, error.status || error.code);
+      }
       
       // Provide more specific error messages
       if (error.status === 401 || error.response?.status === 401) {

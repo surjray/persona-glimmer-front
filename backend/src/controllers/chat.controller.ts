@@ -94,14 +94,22 @@ export const sendMessage = async (
       content,
     });
 
-    // Generate agent response
-    const agentResponseContent = await OpenAIService.generateAgentResponse(
-      agent,
-      topic,
-      guardrails,
-      chatHistory,
-      content
-    );
+    // Generate agent response with error handling
+    let agentResponseContent: string;
+    try {
+      agentResponseContent = await OpenAIService.generateAgentResponse(
+        agent,
+        topic,
+        guardrails,
+        chatHistory,
+        content
+      );
+    } catch (error: any) {
+      // If OpenAI fails, provide a helpful fallback message
+      throw new ValidationError(
+        'Unable to generate response at this time. Please try again in a moment.'
+      );
+    }
 
     // Save agent message
     const agentMessage = await MessageModel.create({
@@ -128,15 +136,19 @@ export const sendMessage = async (
       },
     });
   } catch (error: any) {
-    // Enhanced error logging for debugging
-    console.error('Chat sendMessage error:', {
-      name: error.name,
-      message: error.message,
-      code: error.code,
-      stack: error.stack,
-      userId: req.userId,
-      topicId: req.body?.topicId,
-    });
+    // Log error details only in development
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Chat sendMessage error:', {
+        name: error.name,
+        message: error.message,
+        code: error.code,
+        userId: req.userId,
+        topicId: req.body?.topicId,
+      });
+    } else {
+      // In production, log minimal info without sensitive data
+      console.error('Chat sendMessage error:', error.name, error.message);
+    }
     next(error);
   }
 };

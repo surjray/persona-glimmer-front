@@ -18,7 +18,9 @@ export function TopicListModal({ currentTopicIndex, onClose }: TopicListModalPro
         const response = await topicApi.getWithStatus();
         setTopics(response.data.topics);
       } catch (error) {
-        console.error('Failed to load topics:', error);
+        if (import.meta.env.DEV) {
+          console.error('Failed to load topics:', error);
+        }
       } finally {
         setIsLoading(false);
       }

@@ -2,11 +2,6 @@ import { retry } from '@/utils/retry';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
-// Debug: Log API URL in development
-if (import.meta.env.DEV) {
-  console.log('API Base URL:', API_BASE_URL);
-}
-
 // Health check function to verify backend is available
 async function checkBackendHealth(timeoutMs: number = 10000): Promise<boolean> {
   try {
@@ -102,8 +97,9 @@ async function apiRequest<T>(
     }
 
     const url = `${API_BASE_URL}${endpoint}`;
-    if (import.meta.env.DEV) {
-      console.log('API Request:', url, options.method || 'GET');
+    // Only log in development, and don't log sensitive endpoints
+    if (import.meta.env.DEV && !endpoint.includes('/auth/')) {
+      console.log('API Request:', endpoint, options.method || 'GET');
     }
     
     // Use retry for network errors and server errors (502, 503, 504)

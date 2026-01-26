@@ -128,7 +128,9 @@ export default function Index() {
               timestamp: new Date(m.timestamp),
             }));
           } catch (error) {
-            console.error('Failed to load messages:', error);
+            if (import.meta.env.DEV) {
+          console.error('Failed to load messages:', error);
+        }
           }
         }
 
@@ -148,7 +150,9 @@ export default function Index() {
           showPostTopicSurvey: interactionStatus?.isLocked && !interactionStatus?.surveyCompleted,
         });
       } catch (error: any) {
-        console.error('Failed to load user state:', error);
+        if (import.meta.env.DEV) {
+          console.error('Failed to load user state:', error);
+        }
         // If token is invalid, clear it and redirect to auth
         removeToken();
         if (error.message?.includes('Session expired') || error.message?.includes('Invalid')) {
@@ -464,7 +468,9 @@ export default function Index() {
         }));
       }
     } catch (error) {
-      console.error('Failed to load topic and messages:', error);
+      if (import.meta.env.DEV) {
+        console.error('Failed to load topic and messages:', error);
+      }
     }
   };
 
@@ -542,8 +548,10 @@ export default function Index() {
         variant: 'destructive',
       });
       
-      // Log error for debugging
-      console.error('Chat send message error:', error);
+      // Log error for debugging (only in development)
+      if (import.meta.env.DEV) {
+        console.error('Chat send message error:', error);
+      }
     } finally {
       setIsAgentTyping(false);
     }

@@ -502,10 +502,14 @@ export const getDashboardStats = async (
       },
     });
   } catch (error: any) {
-    // Enhanced error logging
-    console.error('Admin dashboard error:', error.message);
-    if (error.code === 'ETIMEDOUT' || error.message?.includes('timeout')) {
-      console.error('Database connection timeout. Check DATABASE_URL and network connectivity.');
+    // Log admin errors (minimal info in production)
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Admin dashboard error:', error.message);
+      if (error.code === 'ETIMEDOUT' || error.message?.includes('timeout')) {
+        console.error('Database connection timeout. Check DATABASE_URL and network connectivity.');
+      }
+    } else {
+      console.error('Admin dashboard error:', error.name);
     }
     next(error);
   }

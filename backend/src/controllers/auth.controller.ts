@@ -39,7 +39,8 @@ export const register = async (
     // Get assigned agent
     const agent = await AgentModel.findById(user.assigned_agent_id);
     if (!agent) {
-      throw new Error('Assigned agent not found');
+      // This should never happen, but handle gracefully
+      throw new ValidationError('Unable to assign agent. Please try again.');
     }
 
     // Generate token
@@ -85,7 +86,8 @@ export const login = async (
     // Get assigned agent
     const agent = await AgentModel.findById(user.assigned_agent_id);
     if (!agent) {
-      throw new Error('Assigned agent not found');
+      // This should never happen, but handle gracefully
+      throw new ValidationError('Unable to assign agent. Please try again.');
     }
 
     // Generate token
