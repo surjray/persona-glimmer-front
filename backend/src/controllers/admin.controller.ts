@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import { query } from '../config/database';
 import { ValidationError } from '../utils/errors';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 
 // Simple admin authentication - check for admin API key in header
 const ADMIN_API_KEY = process.env.ADMIN_API_KEY || 'dev-admin-key-change-in-production';
@@ -512,5 +514,114 @@ export const getDashboardStats = async (
       console.error('Admin dashboard error:', error.name);
     }
     next(error);
+  }
+};
+
+// Run migrations via API (admin only)
+export const runMigrations = async (
+  req: AdminRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    // Read and execute the migration SQL directly
+    const migrationPath = join(__dirname, '../migrations/010_update_agents_intelligence_levels.sql');
+    const migrationSQL = readFileSync(migrationPath, 'utf-8');
+    
+    // Remove comments
+    const cleanedSQL = migrationSQL
+      .split('\n')
+      .filter(line => !line.trim().startsWith('--'))
+      .join('\n');
+    
+    // Handle DO $$ blocks (execute as single statement)
+    const doBlockRegex = /DO\s+\$\$[\s\S]*?\$\$;/g;
+    const doBlocks = cleanedSQL.match(doBlockRegex) || [];
+    
+    const results: string[] = [];
+    
+    // Execute DO blocks first
+    for (const doBlock of doBlocks) {
+      try {
+        await query(doBlock.trim());
+        results.push('✓ Executed DO block (intelligence levels check/update)');
+      } catch (error: any) {
+        // Ignore "already exists" errors
+        if (error.code === '42P07' || error.code === '42710') {
+          results.push('⚠ DO block already applied');
+        } else {
+          throw error;
+        }
+      }
+    }
+    
+    // Remove DO blocks and split remaining SQL by semicolon
+    const sqlWithoutDoBlocks = cleanedSQL.replace(doBlockRegex, '');
+    const statements = sqlWithoutDoBlocks
+      .split(';')
+      .map(s => s.trim())
+      .filter(s => s.length > 0);
+    
+    // Execute remaining statements
+    for (const statement of statements) {
+      if (statement.trim()) {
+        try {
+          await query(statement);
+          results.push(`✓ Executed: ${statement.substring(0, 60).replace(/\s+/g, ' ')}...`);
+        } catch (error: any) {
+          // Ignore "already exists" or "does not exist" errors (idempotent)
+          if (error.code === '42P07' || error.code === '42710' || error.code === '42703') {
+            results.push(`⚠ Skipped (already applied)`);
+          } else {
+            throw error;
+          }
+        }
+      }
+    }
+    
+    res.json({
+      success: true,
+      message: 'Migration completed successfully',
+      results,
+    });
+  } catch (error: any) {
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Migration error:', error.message);
+    }
+    res.status(500).json({
+      success: false,
+      error: {
+        message: error.message || 'Failed to run migration',
+        code: error.code,
+      },
+    });
+  }
+};
+
+// Run seeds via API (admin only) - just re-seed agents
+export const runSeeds = async (
+  req: AdminRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    // Import and run agent seed directly
+    const { seedAgents } = await import('../seeds/agents.seed');
+    await seedAgents();
+    
+    res.json({
+      success: true,
+      message: 'Agents re-seeded successfully',
+    });
+  } catch (error: any) {
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Seed error:', error.message);
+    }
+    res.status(500).json({
+      success: false,
+      error: {
+        message: error.message || 'Failed to run seeds',
+      },
+    });
   }
 };

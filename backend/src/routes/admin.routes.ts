@@ -7,6 +7,8 @@ import {
   getAllPostTopicSurveyResponses,
   getUserData,
   getDashboardStats,
+  runMigrations,
+  runSeeds,
 } from '../controllers/admin.controller';
 
 const router = Router();
@@ -31,5 +33,11 @@ router.get('/surveys/post-topic', getAllPostTopicSurveyResponses as RequestHandl
 
 // Get comprehensive data for a specific user
 router.get('/users/:userId', getUserData as RequestHandler);
+
+// Run migrations (POST to trigger)
+router.post('/migrations/run', runMigrations as RequestHandler);
+
+// Run seeds (POST to trigger)
+router.post('/seeds/run', runSeeds as RequestHandler);
 
 export default router;

@@ -44,7 +44,7 @@ export class OpenAIService {
       messages.push({ role: 'user', content: userMessage });
 
       // Call OpenAI API with timeout protection
-      const timeoutPromise = new Promise((_, reject) => 
+      const timeoutPromise = new Promise<never>((_, reject) => 
         setTimeout(() => reject(new Error('OpenAI API request timeout')), 30000)
       );
       
@@ -77,7 +77,6 @@ export class OpenAIService {
       }
 
       // Optional: Lightweight keyword detection for extreme violations
-      // This is a simple check - can be enhanced
       const violationKeywords = ['hack', 'exploit', 'illegal', 'harmful'];
       const lowerResponse = response.toLowerCase();
       
@@ -86,6 +85,7 @@ export class OpenAIService {
       }
 
       return response;
+
     } catch (error: any) {
       // Log error details only in development
       if (process.env.NODE_ENV === 'development') {
@@ -102,7 +102,7 @@ export class OpenAIService {
       
       // Provide more specific error messages
       if (error.status === 401 || error.response?.status === 401) {
-        throw new Error('OpenAI API key is invalid. Please check your configuration.');
+        throw new Error('OpenAI API key is invalid or has been revoked. Please verify your API key in Render environment variables and ensure it has not been disabled.');
       } else if (error.status === 429 || error.response?.status === 429) {
         throw new Error('OpenAI API rate limit exceeded. Please try again in a moment.');
       } else if (error.status === 503 || error.response?.status === 503) {
@@ -114,7 +114,18 @@ export class OpenAIService {
       } else if (error.response?.error) {
         // Handle OpenAI API error responses
         const apiError = error.response.error;
-        throw new Error(`OpenAI API error: ${apiError.message || 'Unknown error'}`);
+        const errorMessage = apiError.message || 'Unknown error';
+        
+        // Check for specific error types
+        if (errorMessage.includes('insufficient_quota') || errorMessage.includes('billing')) {
+          throw new Error('OpenAI API key has insufficient quota or billing issue. Please check your OpenAI account billing.');
+        } else if (errorMessage.includes('invalid_api_key') || errorMessage.includes('Incorrect API key')) {
+          throw new Error('OpenAI API key is invalid. Please check your API key in Render environment variables.');
+        } else if (errorMessage.includes('revoked') || errorMessage.includes('disabled')) {
+          throw new Error('OpenAI API key has been revoked or disabled. Please generate a new API key from OpenAI dashboard.');
+        }
+        
+        throw new Error(`OpenAI API error: ${errorMessage}`);
       }
       
       throw new Error(`Failed to generate agent response: ${error.message || 'Unknown error'}`);

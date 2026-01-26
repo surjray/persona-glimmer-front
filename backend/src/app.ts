@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
 import { errorHandler } from './middleware/error.middleware';
+import { validateApiKey } from './config/openai';
 
 // Routes
 import authRoutes from './routes/auth.routes';
@@ -27,6 +28,21 @@ if (missingVars.length > 0) {
 }
 
 console.log('✅ All required environment variables are set');
+
+// Validate OpenAI API key on startup (non-blocking, silent in production)
+if (process.env.NODE_ENV === 'development') {
+  validateApiKey().then(isValid => {
+    if (!isValid) {
+      console.error('⚠️  Warning: OpenAI API key validation failed. Chat functionality may not work.');
+      console.error('   Please check your OPENAI_API_KEY in Render environment variables.');
+    } else {
+      console.log('✅ OpenAI API key validated successfully');
+    }
+  }).catch(() => {
+    // Non-blocking - continue startup even if validation fails
+    console.log('⚠️  Could not validate OpenAI API key (may be network issue)');
+  });
+}
 
 const app: Express = express();
 const PORT = process.env.PORT || 3000;

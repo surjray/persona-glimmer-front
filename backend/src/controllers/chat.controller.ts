@@ -105,10 +105,15 @@ export const sendMessage = async (
         content
       );
     } catch (error: any) {
-      // If OpenAI fails, provide a helpful fallback message
-      throw new ValidationError(
-        'Unable to generate response at this time. Please try again in a moment.'
-      );
+      // Log error for debugging (minimal in production)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('OpenAI service error in chat:', error.message);
+      } else {
+        console.error('OpenAI service error:', error.name);
+      }
+      
+      // Provide a helpful fallback message instead of failing completely
+      agentResponseContent = `I apologize, but I'm having trouble processing your message right now. Could you please rephrase your question or try again in a moment?`;
     }
 
     // Save agent message
