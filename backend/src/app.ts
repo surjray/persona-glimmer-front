@@ -72,13 +72,20 @@ app.use(
         }
         
         // Allow FRONTEND_URL if set
-        if (process.env.FRONTEND_URL && origin === process.env.FRONTEND_URL) {
-          return callback(null, true);
+        if (process.env.FRONTEND_URL) {
+          // Allow exact match
+          if (origin === process.env.FRONTEND_URL) {
+            return callback(null, true);
+          }
+          // Also allow if origin starts with FRONTEND_URL (for subdomains)
+          if (origin.startsWith(process.env.FRONTEND_URL)) {
+            return callback(null, true);
+          }
         }
         
-        // If FRONTEND_URL is set but origin doesn't match, reject
-        if (process.env.FRONTEND_URL) {
-          return callback(new Error('Not allowed by CORS'));
+        // If no FRONTEND_URL is set, allow all Netlify domains as fallback
+        if (!process.env.FRONTEND_URL && origin.includes('.netlify.app')) {
+          return callback(null, true);
         }
       }
       
