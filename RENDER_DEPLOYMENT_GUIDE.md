@@ -61,7 +61,7 @@ DATABASE_URL=postgresql://paid_db_9iwk_user:MQyXT14DYC3qe1uqjoKzvYob3pUITGlP@dpg
 ```
 
 ```
-OPENAI_API_KEY=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
+OPENAI_API_KEY=sk-proj-YOUR_OPENAI_API_KEY_HERE
 ```
 
 ```

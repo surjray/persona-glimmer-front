@@ -47,7 +47,7 @@ export function TopicHeader({
             <p className="text-xs text-muted-foreground mt-0.5">
               {agent.description || 
                 (agent.emotionalIntelligence !== undefined && agent.cognitiveIntelligence !== undefined
-                  ? `EQ: ${agent.emotionalIntelligence}/10, IQ: ${agent.cognitiveIntelligence}/10`
+                  ? `EQ: ${agent.emotionalIntelligence.charAt(0).toUpperCase() + agent.emotionalIntelligence.slice(1)}, IQ: ${agent.cognitiveIntelligence.charAt(0).toUpperCase() + agent.cognitiveIntelligence.slice(1)}`
                   : 'Customer Service Agent')}
             </p>
           </div>

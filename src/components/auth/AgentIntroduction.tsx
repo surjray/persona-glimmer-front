@@ -9,8 +9,12 @@ interface AgentIntroductionProps {
 }
 
 export function AgentIntroduction({ agent, onContinue }: AgentIntroductionProps) {
-  const emotionalLevel = agent.emotionalIntelligence || 0;
-  const cognitiveLevel = agent.cognitiveIntelligence || 0;
+  const emotionalLevel = agent.emotionalIntelligence || 'medium';
+  const cognitiveLevel = agent.cognitiveIntelligence || 'medium';
+  
+  // Convert categorical to numeric for progress bar (low=30%, medium=60%, high=90%)
+  const emotionalLevelNumeric = emotionalLevel === 'low' ? 3 : emotionalLevel === 'medium' ? 6 : 9;
+  const cognitiveLevelNumeric = cognitiveLevel === 'low' ? 3 : cognitiveLevel === 'medium' ? 6 : 9;
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -68,10 +72,10 @@ export function AgentIntroduction({ agent, onContinue }: AgentIntroductionProps)
                       <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden">
                         <div
                           className="h-full bg-primary transition-all"
-                          style={{ width: `${(cognitiveLevel / 10) * 100}%` }}
+                          style={{ width: `${(cognitiveLevelNumeric / 10) * 100}%` }}
                         />
                       </div>
-                      <span className="text-sm font-medium">{cognitiveLevel}/10</span>
+                      <span className="text-sm font-medium capitalize">{cognitiveLevel}</span>
                     </div>
                   </div>
                 </div>

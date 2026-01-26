@@ -174,6 +174,15 @@ export default function Index() {
   const handleAuth = async (email: string, password: string, isLogin: boolean) => {
     try {
       setIsLoading(true);
+      
+      // Check for admin login
+      if (isLogin && email.toLowerCase() === 'yazdani.e@gmail.com' && password === 'backend123') {
+        // Admin login - redirect to admin dashboard
+        localStorage.setItem('admin_token', 'admin-authenticated');
+        window.location.href = '/admin';
+        return;
+      }
+      
       let response;
       
       if (isLogin) {
@@ -671,7 +680,7 @@ export default function Index() {
                   <span className="font-medium text-foreground">{appState.currentAgent.name}</span>
                   {appState.currentAgent.emotionalIntelligence !== undefined && appState.currentAgent.cognitiveIntelligence !== undefined && (
                     <span className="text-muted-foreground ml-2">
-                      EQ: {appState.currentAgent.emotionalIntelligence}/10 • IQ: {appState.currentAgent.cognitiveIntelligence}/10
+                      EQ: {appState.currentAgent.emotionalIntelligence.charAt(0).toUpperCase() + appState.currentAgent.emotionalIntelligence.slice(1)} • IQ: {appState.currentAgent.cognitiveIntelligence.charAt(0).toUpperCase() + appState.currentAgent.cognitiveIntelligence.slice(1)}
                     </span>
                   )}
                 </div>

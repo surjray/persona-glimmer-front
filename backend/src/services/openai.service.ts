@@ -49,6 +49,8 @@ export class OpenAIService {
         messages: messages,
         temperature: 0.7,
         max_tokens: 500,
+        presence_penalty: 0.1,
+        frequency_penalty: 0.1,
       });
 
       const response = completion.choices[0]?.message?.content;
@@ -57,8 +59,10 @@ export class OpenAIService {
         console.error('OpenAI returned empty response:', {
           choices: completion.choices,
           model: DEFAULT_MODEL,
+          usage: completion.usage,
         });
-        throw new Error('OpenAI API returned an empty response. Please try again.');
+        // Return a fallback response instead of throwing
+        return "I understand your question. Let me help you with that. Could you provide a bit more detail so I can assist you better?";
       }
 
       // Optional: Lightweight keyword detection for extreme violations

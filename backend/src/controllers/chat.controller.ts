@@ -28,7 +28,22 @@ export const sendMessage = async (
       throw new ValidationError('User not authenticated');
     }
 
+    // Validate request body
+    if (!req.body || typeof req.body !== 'object') {
+      throw new ValidationError('Invalid request body');
+    }
+
     let { topicId, content } = req.body;
+    
+    // Validate topicId
+    if (!topicId || typeof topicId !== 'number') {
+      throw new ValidationError('Topic ID is required and must be a number');
+    }
+    
+    // Validate content
+    if (!content || typeof content !== 'string' || content.trim().length === 0) {
+      throw new ValidationError('Message content is required');
+    }
     
     // Sanitize message content
     content = sanitizeMessageContent(content);

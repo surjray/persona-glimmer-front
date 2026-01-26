@@ -1,10 +1,12 @@
 import { query } from '../config/database';
 
+export type IntelligenceLevel = 'low' | 'medium' | 'high';
+
 export interface Agent {
   id: number;
   name: string;
-  emotional_intelligence_level: number;
-  cognitive_intelligence_level: number;
+  emotional_intelligence_level: IntelligenceLevel;
+  cognitive_intelligence_level: IntelligenceLevel;
   system_prompt_template: string;
   created_at: Date;
   updated_at: Date;
@@ -13,8 +15,8 @@ export interface Agent {
 export interface AgentPublic {
   id: number;
   name: string;
-  emotionalIntelligence: number;
-  cognitiveIntelligence: number;
+  emotionalIntelligence: IntelligenceLevel;
+  cognitiveIntelligence: IntelligenceLevel;
 }
 
 export class AgentModel {

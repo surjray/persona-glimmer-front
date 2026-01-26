@@ -12,6 +12,7 @@ const migrations = [
   '007_create_guardrails.sql',
   '008_create_triggers.sql',
   '009_create_password_reset_tokens.sql',
+  '010_update_agents_intelligence_levels.sql',
 ];
 
 async function runMigrations() {

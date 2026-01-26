@@ -6,13 +6,15 @@ export interface User {
   hasCompletedLiteracySurvey: boolean;
 }
 
+export type IntelligenceLevel = 'low' | 'medium' | 'high';
+
 export interface Agent {
   id: number | string;
   name: string;
   description?: string;
   avatar?: string;
-  emotionalIntelligence?: number;
-  cognitiveIntelligence?: number;
+  emotionalIntelligence?: IntelligenceLevel;
+  cognitiveIntelligence?: IntelligenceLevel;
 }
 
 export interface Topic {

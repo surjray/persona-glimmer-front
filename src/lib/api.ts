@@ -254,8 +254,8 @@ export const authApi = {
       agent: {
         id: number;
         name: string;
-        emotionalIntelligence: number;
-        cognitiveIntelligence: number;
+        emotionalIntelligence: 'low' | 'medium' | 'high';
+        cognitiveIntelligence: 'low' | 'medium' | 'high';
       };
       token: string;
     }>('/api/auth/register', {
@@ -282,8 +282,8 @@ export const authApi = {
       agent: {
         id: number;
         name: string;
-        emotionalIntelligence: number;
-        cognitiveIntelligence: number;
+        emotionalIntelligence: 'low' | 'medium' | 'high';
+        cognitiveIntelligence: 'low' | 'medium' | 'high';
       };
       token: string;
     }>('/api/auth/login', {
@@ -340,8 +340,8 @@ export const userApi = {
       agent: {
         id: number;
         name: string;
-        emotionalIntelligence: number;
-        cognitiveIntelligence: number;
+        emotionalIntelligence: 'low' | 'medium' | 'high';
+        cognitiveIntelligence: 'low' | 'medium' | 'high';
       };
       currentTopic: {
         id: number;
@@ -472,6 +472,158 @@ export const chatApi = {
       surveyCompleted: boolean;
       maxInteractions: number;
     }>(`/api/chat/status/${topicId}`);
+  },
+};
+
+// Admin API
+export const adminApi = {
+  getDashboard: async () => {
+    return apiRequest<{
+      totalUsers: number;
+      totalMessages: number;
+      completedLiteracySurvey: number;
+      totalInteractions: number;
+      completedPostTopicSurveys: number;
+      agentDistribution: Array<{ agentId: number; userCount: number }>;
+    }>('/api/admin/dashboard', {
+      headers: {
+        'x-admin-api-key': 'backend123',
+      },
+    });
+  },
+
+  getAllUsers: async () => {
+    return apiRequest<{
+      users: Array<{
+        id: string;
+        email: string;
+        assignedAgentId: number;
+        agentEQ: 'low' | 'medium' | 'high';
+        agentIQ: 'low' | 'medium' | 'high';
+        currentTopicIndex: number;
+        hasCompletedLiteracySurvey: boolean;
+        createdAt: string;
+        updatedAt: string;
+      }>;
+      total: number;
+    }>('/api/admin/users', {
+      headers: {
+        'x-admin-api-key': 'backend123',
+      },
+    });
+  },
+
+  getAllMessages: async (filters?: { userId?: string; topicId?: number; limit?: number; offset?: number }) => {
+    const params = new URLSearchParams();
+    if (filters?.userId) params.append('userId', filters.userId);
+    if (filters?.topicId) params.append('topicId', filters.topicId.toString());
+    if (filters?.limit) params.append('limit', filters.limit.toString());
+    if (filters?.offset) params.append('offset', filters.offset.toString());
+
+    const queryString = params.toString();
+    return apiRequest<{
+      messages: Array<{
+        id: string;
+        userId: string;
+        userEmail: string;
+        topicId: number;
+        topicTitle: string;
+        role: 'user' | 'agent';
+        content: string;
+        timestamp: string;
+      }>;
+      total: number;
+    }>(`/api/admin/messages${queryString ? `?${queryString}` : ''}`, {
+      headers: {
+        'x-admin-api-key': 'backend123',
+      },
+    });
+  },
+
+  getAllLiteracySurveyResponses: async (userId?: string) => {
+    const queryString = userId ? `?userId=${userId}` : '';
+    return apiRequest<{
+      responses: Array<{
+        id: string;
+        userId: string;
+        userEmail: string;
+        questionId: string;
+        responseValue: string;
+        createdAt: string;
+      }>;
+      total: number;
+    }>(`/api/admin/surveys/literacy${queryString}`, {
+      headers: {
+        'x-admin-api-key': 'backend123',
+      },
+    });
+  },
+
+  getAllPostTopicSurveyResponses: async (filters?: { userId?: string; topicId?: number }) => {
+    const params = new URLSearchParams();
+    if (filters?.userId) params.append('userId', filters.userId);
+    if (filters?.topicId) params.append('topicId', filters.topicId.toString());
+
+    const queryString = params.toString();
+    return apiRequest<{
+      responses: Array<{
+        id: string;
+        userId: string;
+        userEmail: string;
+        topicId: number;
+        topicTitle: string;
+        questionId: string;
+        responseValue: number;
+        createdAt: string;
+      }>;
+      total: number;
+    }>(`/api/admin/surveys/post-topic${queryString ? `?${queryString}` : ''}`, {
+      headers: {
+        'x-admin-api-key': 'backend123',
+      },
+    });
+  },
+
+  getUserData: async (userId: string) => {
+    return apiRequest<{
+      user: {
+        id: string;
+        email: string;
+        assignedAgentId: number;
+        agentEQ: 'low' | 'medium' | 'high';
+        agentIQ: 'low' | 'medium' | 'high';
+        currentTopicIndex: number;
+        hasCompletedLiteracySurvey: boolean;
+        createdAt: string;
+        updatedAt: string;
+      };
+      messages: Array<{
+        id: string;
+        topicId: number;
+        topicTitle: string;
+        role: 'user' | 'agent';
+        content: string;
+        timestamp: string;
+      }>;
+      literacySurveyResponses: Array<{
+        questionId: string;
+        responseValue: string;
+      }>;
+      postTopicSurveyResponses: Array<{
+        topicId: number;
+        topicTitle: string;
+        questionId: string;
+        responseValue: number;
+      }>;
+      progress: {
+        completedTopics: number;
+        totalInteractions: number;
+      };
+    }>(`/api/admin/users/${userId}`, {
+      headers: {
+        'x-admin-api-key': 'backend123',
+      },
+    });
   },
 };
 
