@@ -30,7 +30,7 @@
    - Find `OPENAI_API_KEY`
    - Update value to:
      ```
-     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
+     sk-proj-YOUR_OPENAI_API_KEY_HERE
      ```
    - Click **"Save Changes"**
 
@@ -78,7 +78,7 @@ After updating:
 ## New API Key
 
 ```
-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
+sk-proj-YOUR_OPENAI_API_KEY_HERE
 ```
 
 **Use this key in:**
