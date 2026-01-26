@@ -35,23 +35,41 @@ export default function AdminDashboard() {
   const loadDashboardData = async () => {
     try {
       setIsLoading(true);
-      const [statsRes, usersRes, messagesRes, literacyRes, postTopicRes] = await Promise.all([
-        adminApi.getDashboard(),
-        adminApi.getAllUsers(),
-        adminApi.getAllMessages({ limit: 1000 }),
-        adminApi.getAllLiteracySurveyResponses(),
-        adminApi.getAllPostTopicSurveyResponses(),
-      ]);
+      
+      // Load stats first (lightweight)
+      try {
+        const statsRes = await adminApi.getDashboard();
+        setDashboardStats(statsRes.data);
+      } catch (error: any) {
+        console.error('Failed to load dashboard stats:', error);
+        // Continue loading other data even if stats fail
+      }
 
-      setDashboardStats(statsRes.data);
-      setUsers(usersRes.data.users);
-      setMessages(messagesRes.data.messages);
-      setLiteracySurveys(literacyRes.data.responses);
-      setPostTopicSurveys(postTopicRes.data.responses);
+      // Load other data in parallel (but after stats)
+      try {
+        const [usersRes, messagesRes, literacyRes, postTopicRes] = await Promise.all([
+          adminApi.getAllUsers(),
+          adminApi.getAllMessages({ limit: 1000 }),
+          adminApi.getAllLiteracySurveyResponses(),
+          adminApi.getAllPostTopicSurveyResponses(),
+        ]);
+
+        setUsers(usersRes.data.users);
+        setMessages(messagesRes.data.messages);
+        setLiteracySurveys(literacyRes.data.responses);
+        setPostTopicSurveys(postTopicRes.data.responses);
+      } catch (error: any) {
+        console.error('Failed to load dashboard data:', error);
+        toast({
+          title: 'Error loading some data',
+          description: error.message || 'Some data may not be available. Please refresh the page.',
+          variant: 'destructive',
+        });
+      }
     } catch (error: any) {
       toast({
-        title: 'Error loading data',
-        description: error.message || 'Failed to load dashboard data',
+        title: 'Error connecting to backend',
+        description: error.message || 'Failed to connect to the backend. The service may be starting up. Please try again in a moment.',
         variant: 'destructive',
       });
     } finally {
@@ -117,9 +135,10 @@ export default function AdminDashboard() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading dashboard data...</p>
+        <div className="text-center space-y-4">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-primary" />
+          <p className="text-muted-foreground">Connecting to backend...</p>
+          <p className="text-sm text-muted-foreground/70">This may take a moment if the service is starting up</p>
         </div>
       </div>
     );
@@ -134,10 +153,15 @@ export default function AdminDashboard() {
             <h1 className="text-2xl font-bold">Admin Dashboard</h1>
             <p className="text-sm text-muted-foreground">Research Platform Data Management</p>
           </div>
-          <Button onClick={handleLogout} variant="outline">
-            <LogOut className="w-4 h-4 mr-2" />
-            Logout
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button onClick={loadDashboardData} variant="ghost" size="sm">
+              Refresh
+            </Button>
+            <Button onClick={handleLogout} variant="outline">
+              <LogOut className="w-4 h-4 mr-2" />
+              Logout
+            </Button>
+          </div>
         </div>
       </div>
 

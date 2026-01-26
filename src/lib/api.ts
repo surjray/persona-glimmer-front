@@ -81,13 +81,13 @@ async function apiRequest<T>(
   }
 
   try {
-    // For auth endpoints, check backend health first (unless explicitly skipped)
+    // For auth and admin endpoints, check backend health first (unless explicitly skipped)
     // Skip health check for the health endpoint itself to avoid infinite loop
-    if (!skipHealthCheck && endpoint.includes('/auth/') && endpoint !== '/health') {
+    if (!skipHealthCheck && (endpoint.includes('/auth/') || endpoint.includes('/admin/')) && endpoint !== '/health') {
       const isHealthy = await checkBackendHealth(5000);
       if (!isHealthy) {
         // Backend might be waking up, wait a bit longer
-        const backendAvailable = await waitForBackend(25000, 2000);
+        const backendAvailable = await waitForBackend(30000, 2000);
         if (!backendAvailable) {
           throw new Error(
             'Backend service is temporarily unavailable. This may be due to the service waking up. Please try again in a few moments.'
