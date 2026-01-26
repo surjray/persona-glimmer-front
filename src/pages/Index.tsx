@@ -216,46 +216,25 @@ export default function Index() {
         setCurrentTopic(topicData);
       }
 
-      // Show agent introduction for new users only
-      if (!isLogin && !user.hasCompletedLiteracySurvey) {
-        setShowAgentIntroduction(true);
-        setAppState({
-          currentView: 'auth', // Keep on auth view until intro is done
-          user: {
-            id: user.id,
-            email: user.email,
-            assignedAgentId: user.assignedAgentId,
-            currentTopicIndex: user.currentTopicIndex,
-            hasCompletedLiteracySurvey: user.hasCompletedLiteracySurvey,
-          },
-          currentTopicIndex: user.currentTopicIndex || 0,
-          currentAgent: agentData,
-          interactionCount: 0,
-          messages: [],
-          showPostTopicSurvey: false,
-        });
-      } else {
-        setAppState({
-          currentView: user.hasCompletedLiteracySurvey ? 'chat' : 'literacy-survey',
-          user: {
-            id: user.id,
-            email: user.email,
-            assignedAgentId: user.assignedAgentId,
-            currentTopicIndex: user.currentTopicIndex,
-            hasCompletedLiteracySurvey: user.hasCompletedLiteracySurvey,
-          },
-          currentTopicIndex: user.currentTopicIndex || 0,
-          currentAgent: agentData,
-          interactionCount: 0,
-          messages: [],
-          showPostTopicSurvey: false,
-        });
-      }
-
-      toast({
-        title: isLogin ? 'Welcome back!' : 'Account created',
-        description: `You've been assigned to ${agent.name}`,
+      // Skip agent introduction - go directly to survey or chat
+      setAppState({
+        currentView: user.hasCompletedLiteracySurvey ? 'chat' : 'literacy-survey',
+        user: {
+          id: user.id,
+          email: user.email,
+          assignedAgentId: user.assignedAgentId,
+          currentTopicIndex: user.currentTopicIndex,
+          hasCompletedLiteracySurvey: user.hasCompletedLiteracySurvey,
+        },
+        currentTopicIndex: user.currentTopicIndex || 0,
+        currentAgent: agentData,
+        interactionCount: 0,
+        messages: [],
+        showPostTopicSurvey: false,
       });
+
+      // Don't show toast with agent name - removed for research purposes
+      // Users should not see which agent they're assigned to
     } catch (error: any) {
       let errorTitle = 'Authentication failed';
       let errorDescription = error.message || 'Please check your credentials and try again.';
@@ -430,12 +409,51 @@ export default function Index() {
         timestamp: new Date(m.timestamp),
       }));
 
-      setAppState((prev) => ({
-        ...prev,
-        messages,
-        interactionCount: topicResponse.data.interactionCount,
-        showPostTopicSurvey: topicResponse.data.isLocked && !topicResponse.data.surveyCompleted,
-      }));
+      // If no messages exist, automatically send the stimulus as the first message
+      if (messages.length === 0 && topic.stimulusText && topic.stimulusText.trim().length > 0) {
+        // Automatically send stimulus as first message
+        try {
+          const response = await chatApi.sendMessage(Number(topic.id), topic.stimulusText.trim());
+          
+          const userMessage: Message = {
+            id: response.data.userMessage.id,
+            content: response.data.userMessage.content,
+            role: response.data.userMessage.role,
+            timestamp: new Date(response.data.userMessage.timestamp),
+          };
+
+          const agentMessage: Message = {
+            id: response.data.agentMessage.id,
+            content: response.data.agentMessage.content,
+            role: response.data.agentMessage.role,
+            timestamp: new Date(response.data.agentMessage.timestamp),
+          };
+
+          setAppState((prev) => ({
+            ...prev,
+            messages: [userMessage, agentMessage],
+            interactionCount: response.data.interactionCount,
+            showPostTopicSurvey: response.data.shouldShowSurvey,
+          }));
+        } catch (error) {
+          console.error('Failed to send initial stimulus message:', error);
+          // If stimulus send fails, still set empty messages
+          setAppState((prev) => ({
+            ...prev,
+            messages: [],
+            interactionCount: topicResponse.data.interactionCount,
+            showPostTopicSurvey: topicResponse.data.isLocked && !topicResponse.data.surveyCompleted,
+          }));
+        }
+      } else {
+        // Messages exist, just load them
+        setAppState((prev) => ({
+          ...prev,
+          messages,
+          interactionCount: topicResponse.data.interactionCount,
+          showPostTopicSurvey: topicResponse.data.isLocked && !topicResponse.data.surveyCompleted,
+        }));
+      }
     } catch (error) {
       console.error('Failed to load topic and messages:', error);
     }
@@ -461,7 +479,7 @@ export default function Index() {
         messages: [...prev.messages, tempUserMessage],
       }));
 
-      const response = await chatApi.sendMessage(Number(currentTopic.id), content);
+      const response = await chatApi.sendMessage(Number(currentTopic.id), content.trim());
       
       const userMessage: Message = {
         id: response.data.userMessage.id,
@@ -490,11 +508,33 @@ export default function Index() {
         ...prev,
         messages: prev.messages.filter(m => !m.id.startsWith('temp-')),
       }));
+      
+      // Better error messages for chat errors
+      let errorTitle = 'Failed to send message';
+      let errorDescription = error.message || 'Please try again';
+      
+      if (error.message?.includes('Topic is locked')) {
+        errorTitle = 'Topic locked';
+        errorDescription = 'Please complete the survey to continue chatting.';
+      } else if (error.message?.includes('Topic not found')) {
+        errorTitle = 'Topic not found';
+        errorDescription = 'The selected topic could not be found. Please refresh the page.';
+      } else if (error.message?.includes('OpenAI') || error.message?.includes('API')) {
+        errorTitle = 'Service temporarily unavailable';
+        errorDescription = 'The AI service is having issues. Please try again in a moment.';
+      } else if (error.message?.includes('Server error') || error.message?.includes('500')) {
+        errorTitle = 'Server error';
+        errorDescription = 'The server encountered an error. Please try again in a moment.';
+      }
+      
       toast({
-        title: 'Failed to send message',
-        description: error.message || 'Please try again',
+        title: errorTitle,
+        description: errorDescription,
         variant: 'destructive',
       });
+      
+      // Log error for debugging
+      console.error('Chat send message error:', error);
     } finally {
       setIsAgentTyping(false);
     }
@@ -523,27 +563,14 @@ export default function Index() {
 
   // Render based on current view
   if (appState.currentView === 'auth') {
-    if (showAgentIntroduction && appState.currentAgent) {
-      return (
-        <AgentIntroduction
-          agent={appState.currentAgent}
-          onContinue={() => {
-            setShowAgentIntroduction(false);
-            setAppState((prev) => ({
-              ...prev,
-              currentView: 'literacy-survey',
-            }));
-          }}
-        />
-      );
-    }
+    // Agent introduction removed - skip directly to survey or chat
     if (showForgotPassword) {
       return <ForgotPasswordForm onBack={() => setShowForgotPassword(false)} />;
     }
     return (
       <AuthForm
         onSubmit={(email, password, isLogin) => handleAuth(email, password, isLogin)}
-        onForgotPassword={() => setShowForgotPassword(false)}
+        onForgotPassword={() => setShowForgotPassword(true)}
       />
     );
   }
