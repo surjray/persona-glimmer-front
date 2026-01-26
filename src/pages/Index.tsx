@@ -190,7 +190,7 @@ export default function Index() {
       if (isLogin && email.toLowerCase() === 'yazdani.e@gmail.com' && password === 'backend123') {
         // Admin login - redirect to admin dashboard
         localStorage.setItem('admin_token', 'admin-authenticated');
-        window.location.href = '/admin';
+        window.location.href = '/#/admin';
         return;
       }
       
