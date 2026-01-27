@@ -718,9 +718,3 @@ This document describes the 10 policy pairs (20 total topics) used in the Servic
 |------|-------|---------------|---------------------|
 | **Utilitarian (U)** | Functional/Practical | "Can I use this?" | Fix the problem, speed matters |
 | **Hedonic (H)** | Experiential/Emotional | "How does this make me feel?" | Validate feelings, restore trust |
-
----
-
-*Document prepared for Service Agent Research Study*
-
-*10 Policy Pairs × 2 Scenarios = 20 Topics Total*
