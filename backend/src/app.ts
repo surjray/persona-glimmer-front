@@ -47,6 +47,10 @@ if (process.env.NODE_ENV === 'development') {
 const app: Express = express();
 const PORT = process.env.PORT || 3000;
 
+// Trust proxy - required for running behind reverse proxies like Render, Netlify, etc.
+// This allows express-rate-limit to correctly identify users via X-Forwarded-For header
+app.set('trust proxy', 1);
+
 // Middleware
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }
