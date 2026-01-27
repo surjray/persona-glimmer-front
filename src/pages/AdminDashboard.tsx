@@ -80,8 +80,13 @@ export default function AdminDashboard() {
   const handleViewUser = async (userId: string) => {
     try {
       const response = await adminApi.getUserData(userId);
-      setSelectedUser(response.data);
+      console.log('User data response:', response);
+      // Handle both response.data (from API wrapper) and direct response
+      const userData = response.data || response;
+      console.log('Setting selectedUser:', userData);
+      setSelectedUser(userData);
     } catch (error: any) {
+      console.error('Error loading user data:', error);
       toast({
         title: 'Error loading user data',
         description: error.message || 'Failed to load user details',
@@ -466,7 +471,7 @@ export default function AdminDashboard() {
         </Tabs>
 
         {/* User Details Modal */}
-        {selectedUser && (
+        {selectedUser && selectedUser.user && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <Card className="w-full max-w-4xl max-h-[90vh] overflow-y-auto">
               <CardHeader>
