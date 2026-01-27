@@ -26,9 +26,12 @@ async function runMigrations() {
         'utf-8'
       );
       
-      // For trigger files with dollar-quoted strings, execute as single statement
-      if (migration.includes('triggers')) {
-        // Remove comments
+      // Check if the file contains dollar-quoted strings (DO $$ blocks or triggers)
+      const hasDollarQuotedStrings = sql.includes('$$');
+      
+      // For files with dollar-quoted strings, execute as single statement
+      if (migration.includes('triggers') || hasDollarQuotedStrings) {
+        // Remove single-line comments but preserve the rest
         const cleanedSql = sql
           .split('\n')
           .filter(line => !line.trim().startsWith('--'))
