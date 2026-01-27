@@ -488,8 +488,8 @@ export default function AdminDashboard() {
                     <div><strong>Agent:</strong> Agent {selectedUser.user.assignedAgentId} (EQ: {typeof selectedUser.user.agentEQ === 'string' ? selectedUser.user.agentEQ.charAt(0).toUpperCase() + selectedUser.user.agentEQ.slice(1) : selectedUser.user.agentEQ}, IQ: {typeof selectedUser.user.agentIQ === 'string' ? selectedUser.user.agentIQ.charAt(0).toUpperCase() + selectedUser.user.agentIQ.slice(1) : selectedUser.user.agentIQ})</div>
                     <div><strong>Current Topic:</strong> {selectedUser.user.currentTopicIndex + 1}/20</div>
                     <div><strong>Literacy Survey:</strong> {selectedUser.user.hasCompletedLiteracySurvey ? 'Completed' : 'Not Completed'}</div>
-                    <div><strong>Completed Topics:</strong> {selectedUser.progress.completedTopics}</div>
-                    <div><strong>Total Interactions:</strong> {selectedUser.progress.totalInteractions}</div>
+                    <div><strong>Completed Topics:</strong> {selectedUser.topicInteractions?.filter((t: any) => t.surveyCompleted).length || 0}</div>
+                    <div><strong>Total Interactions:</strong> {selectedUser.topicInteractions?.reduce((sum: number, t: any) => sum + (t.interactionCount || 0), 0) || 0}</div>
                   </div>
                 </div>
 

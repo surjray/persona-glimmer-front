@@ -611,10 +611,16 @@ export const adminApi = {
         questionId: string;
         responseValue: number;
       }>;
-      progress: {
-        completedTopics: number;
-        totalInteractions: number;
-      };
+      topicInteractions: Array<{
+        id: string;
+        topicId: number;
+        topicTitle: string;
+        interactionCount: number;
+        isLocked: boolean;
+        surveyCompleted: boolean;
+        createdAt: string;
+        updatedAt: string;
+      }>;
     }>(`/api/admin/users/${userId}`, {
       headers: {
         'x-admin-api-key': 'backend123',
