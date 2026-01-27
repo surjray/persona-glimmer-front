@@ -20,13 +20,6 @@ import { useToast } from '@/hooks/use-toast';
 
 const MAX_INTERACTIONS = 10;
 
-// Helper function to safely capitalize intelligence level
-const capitalizeIntelligence = (level: string | number | undefined): string => {
-  if (level === undefined || level === null) return '';
-  const str = String(level);
-  return str.charAt(0).toUpperCase() + str.slice(1);
-};
-
 export default function Index() {
   const { toast } = useToast();
   const [appState, setAppState] = useState<AppState>({
@@ -693,11 +686,6 @@ export default function Index() {
               <div className="hidden md:flex items-center gap-3 px-3 py-1.5 bg-muted/50 rounded-lg">
                 <div className="text-xs">
                   <span className="font-medium text-foreground">{appState.currentAgent.name}</span>
-                  {appState.currentAgent.emotionalIntelligence !== undefined && appState.currentAgent.cognitiveIntelligence !== undefined && (
-                    <span className="text-muted-foreground ml-2">
-                      EQ: {capitalizeIntelligence(appState.currentAgent.emotionalIntelligence)} • IQ: {capitalizeIntelligence(appState.currentAgent.cognitiveIntelligence)}
-                    </span>
-                  )}
                 </div>
               </div>
             )}

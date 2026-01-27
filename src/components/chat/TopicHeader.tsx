@@ -12,13 +12,6 @@ interface TopicHeaderProps {
   onShowPolicy: () => void;
 }
 
-// Helper function to safely capitalize intelligence level
-const capitalizeIntelligence = (level: string | number | undefined): string => {
-  if (level === undefined || level === null) return '';
-  const str = String(level);
-  return str.charAt(0).toUpperCase() + str.slice(1);
-};
-
 export function TopicHeader({
   topic,
   agent,
@@ -52,10 +45,7 @@ export function TopicHeader({
               <span className="text-sm font-medium">{agent.name}</span>
             </div>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {agent.description || 
-                (agent.emotionalIntelligence !== undefined && agent.cognitiveIntelligence !== undefined
-                  ? `EQ: ${capitalizeIntelligence(agent.emotionalIntelligence)}, IQ: ${capitalizeIntelligence(agent.cognitiveIntelligence)}`
-                  : 'Customer Service Agent')}
+              {agent.description || 'Customer Service Agent'}
             </p>
           </div>
           <Button variant="outline" size="sm" onClick={onShowPolicy}>
