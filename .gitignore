@@ -29,3 +29,5 @@ backend/.env
 *.sln
 *.sw?
 /data_folder_private
+docs/safe_keeping.md
+persona-glimmer-front.code-workspace
