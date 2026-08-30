@@ -63,6 +63,29 @@ export const removeToken = (): void => {
   localStorage.removeItem(TOKEN_KEY);
 };
 
+// Admin API key management.
+// The key is entered by the researcher on the admin dashboard and verified against
+// the backend before being stored for the browser session — it is never shipped in
+// the bundle. sessionStorage means it is cleared when the tab closes.
+const ADMIN_KEY_STORAGE = 'admin_api_key';
+
+export const getAdminKey = (): string | null => {
+  return sessionStorage.getItem(ADMIN_KEY_STORAGE);
+};
+
+export const setAdminKey = (key: string): void => {
+  sessionStorage.setItem(ADMIN_KEY_STORAGE, key);
+};
+
+export const clearAdminKey = (): void => {
+  sessionStorage.removeItem(ADMIN_KEY_STORAGE);
+};
+
+const adminHeaders = (): Record<string, string> => {
+  const key = getAdminKey();
+  return key ? { 'x-admin-api-key': key } : {};
+};
+
 // API request helper
 async function apiRequest<T>(
   endpoint: string,
@@ -176,6 +199,12 @@ async function apiRequest<T>(
     if (!response.ok) {
       // Handle 401 Unauthorized (token expired/invalid)
       if (response.status === 401) {
+        // Admin endpoints authenticate with the admin key, not the participant JWT —
+        // a 401 there means the key was rejected, so don't touch the participant session
+        if (endpoint.includes('/admin/')) {
+          clearAdminKey();
+          throw new Error('Invalid admin key. Please enter the admin API key again.');
+        }
         removeToken();
         // Dispatch custom event for auth failure
         window.dispatchEvent(new CustomEvent('auth-failed'));
@@ -473,6 +502,14 @@ export const chatApi = {
 
 // Admin API
 export const adminApi = {
+  // Verify a candidate admin key against the backend (used by the admin login form
+  // before the key is stored)
+  verifyKey: async (key: string) => {
+    return apiRequest<{ ok: boolean }>('/api/admin/verify', {
+      headers: { 'x-admin-api-key': key },
+    });
+  },
+
   getDashboard: async () => {
     return apiRequest<{
       totalUsers: number;
@@ -482,9 +519,7 @@ export const adminApi = {
       completedPostTopicSurveys: number;
       agentDistribution: Array<{ agentId: number; userCount: number }>;
     }>('/api/admin/dashboard', {
-      headers: {
-        'x-admin-api-key': 'backend123',
-      },
+      headers: adminHeaders(),
     });
   },
 
@@ -503,9 +538,7 @@ export const adminApi = {
       }>;
       total: number;
     }>('/api/admin/users', {
-      headers: {
-        'x-admin-api-key': 'backend123',
-      },
+      headers: adminHeaders(),
     });
   },
 
@@ -530,9 +563,7 @@ export const adminApi = {
       }>;
       total: number;
     }>(`/api/admin/messages${queryString ? `?${queryString}` : ''}`, {
-      headers: {
-        'x-admin-api-key': 'backend123',
-      },
+      headers: adminHeaders(),
     });
   },
 
@@ -549,9 +580,7 @@ export const adminApi = {
       }>;
       total: number;
     }>(`/api/admin/surveys/literacy${queryString}`, {
-      headers: {
-        'x-admin-api-key': 'backend123',
-      },
+      headers: adminHeaders(),
     });
   },
 
@@ -574,9 +603,7 @@ export const adminApi = {
       }>;
       total: number;
     }>(`/api/admin/surveys/post-topic${queryString ? `?${queryString}` : ''}`, {
-      headers: {
-        'x-admin-api-key': 'backend123',
-      },
+      headers: adminHeaders(),
     });
   },
 
@@ -622,9 +649,7 @@ export const adminApi = {
         updatedAt: string;
       }>;
     }>(`/api/admin/users/${userId}`, {
-      headers: {
-        'x-admin-api-key': 'backend123',
-      },
+      headers: adminHeaders(),
     });
   },
 };

@@ -1,7 +1,7 @@
 # Quick Database Viewer - Simple Commands
 
 ## Your Admin API Key
-`backend123`
+`REPLACE_WITH_ADMIN_API_KEY`
 
 ## Your Backend URL
 `https://persona-glimmer-backend.onrender.com`
@@ -12,21 +12,21 @@
 
 ### View Dashboard Statistics
 ```powershell
-$headers = @{'x-admin-api-key' = 'backend123'}
+$headers = @{'x-admin-api-key' = 'REPLACE_WITH_ADMIN_API_KEY'}
 $response = Invoke-WebRequest -Uri "https://persona-glimmer-backend.onrender.com/api/admin/dashboard" -Headers $headers -UseBasicParsing
 $response.Content | ConvertFrom-Json | ConvertTo-Json -Depth 10
 ```
 
 ### View All Users
 ```powershell
-$headers = @{'x-admin-api-key' = 'backend123'}
+$headers = @{'x-admin-api-key' = 'REPLACE_WITH_ADMIN_API_KEY'}
 $response = Invoke-WebRequest -Uri "https://persona-glimmer-backend.onrender.com/api/admin/users" -Headers $headers -UseBasicParsing
 $response.Content | ConvertFrom-Json | ConvertTo-Json -Depth 10
 ```
 
 ### View All Messages
 ```powershell
-$headers = @{'x-admin-api-key' = 'backend123'}
+$headers = @{'x-admin-api-key' = 'REPLACE_WITH_ADMIN_API_KEY'}
 $response = Invoke-WebRequest -Uri "https://persona-glimmer-backend.onrender.com/api/admin/messages" -Headers $headers -UseBasicParsing
 $response.Content | ConvertFrom-Json | ConvertTo-Json -Depth 10
 ```
@@ -34,12 +34,12 @@ $response.Content | ConvertFrom-Json | ConvertTo-Json -Depth 10
 ### View Survey Responses
 ```powershell
 # AI Literacy Survey
-$headers = @{'x-admin-api-key' = 'backend123'}
+$headers = @{'x-admin-api-key' = 'REPLACE_WITH_ADMIN_API_KEY'}
 $response = Invoke-WebRequest -Uri "https://persona-glimmer-backend.onrender.com/api/admin/surveys/literacy" -Headers $headers -UseBasicParsing
 $response.Content | ConvertFrom-Json | ConvertTo-Json -Depth 10
 
 # Post-Topic Survey
-$headers = @{'x-admin-api-key' = 'backend123'}
+$headers = @{'x-admin-api-key' = 'REPLACE_WITH_ADMIN_API_KEY'}
 $response = Invoke-WebRequest -Uri "https://persona-glimmer-backend.onrender.com/api/admin/surveys/post-topic" -Headers $headers -UseBasicParsing
 $response.Content | ConvertFrom-Json | ConvertTo-Json -Depth 10
 ```
@@ -47,7 +47,7 @@ $response.Content | ConvertFrom-Json | ConvertTo-Json -Depth 10
 ### View Specific User Data
 ```powershell
 # Replace {userId} with actual user ID
-$headers = @{'x-admin-api-key' = 'backend123'}
+$headers = @{'x-admin-api-key' = 'REPLACE_WITH_ADMIN_API_KEY'}
 $response = Invoke-WebRequest -Uri "https://persona-glimmer-backend.onrender.com/api/admin/users/{userId}" -Headers $headers -UseBasicParsing
 $response.Content | ConvertFrom-Json | ConvertTo-Json -Depth 10
 ```
@@ -94,7 +94,7 @@ Based on your test, you currently have:
 To save the data to a file for analysis:
 
 ```powershell
-$headers = @{'x-admin-api-key' = 'backend123'}
+$headers = @{'x-admin-api-key' = 'REPLACE_WITH_ADMIN_API_KEY'}
 $response = Invoke-WebRequest -Uri "https://persona-glimmer-backend.onrender.com/api/admin/users" -Headers $headers -UseBasicParsing
 $response.Content | ConvertFrom-Json | ConvertTo-Json -Depth 10 | Out-File -FilePath "users-data.json" -Encoding UTF8
 ```

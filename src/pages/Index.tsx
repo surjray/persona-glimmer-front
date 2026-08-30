@@ -178,15 +178,7 @@ export default function Index() {
   const handleAuth = async (email: string, password: string, isLogin: boolean) => {
     try {
       setIsLoading(true);
-      
-      // Check for admin login
-      if (isLogin && email.toLowerCase() === 'yazdani.e@gmail.com' && password === 'backend123') {
-        // Admin login - redirect to admin dashboard
-        localStorage.setItem('admin_token', 'admin-authenticated');
-        window.location.href = '/#/admin';
-        return;
-      }
-      
+
       let response;
       
       if (isLogin) {

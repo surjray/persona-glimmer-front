@@ -4,9 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { adminApi } from '@/lib/api';
+import { adminApi, getAdminKey, setAdminKey, clearAdminKey } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
-import { LogOut, Users, MessageSquare, FileText, BarChart3, Search, Loader2, Download } from 'lucide-react';
+import { LogOut, Users, MessageSquare, FileText, BarChart3, Search, Loader2, Download, KeyRound } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -27,10 +27,39 @@ export default function AdminDashboard() {
   const [postTopicSurveys, setPostTopicSurveys] = useState<any[]>([]);
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isAuthorized, setIsAuthorized] = useState<boolean>(() => !!getAdminKey());
+  const [keyInput, setKeyInput] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
 
   useEffect(() => {
-    loadDashboardData();
-  }, []);
+    if (isAuthorized) {
+      loadDashboardData();
+    } else {
+      setIsLoading(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthorized]);
+
+  const handleAdminLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const key = keyInput.trim();
+    if (!key) return;
+    try {
+      setIsVerifying(true);
+      await adminApi.verifyKey(key);
+      setAdminKey(key);
+      setKeyInput('');
+      setIsAuthorized(true);
+    } catch (error: any) {
+      toast({
+        title: 'Access denied',
+        description: error.message || 'The admin key was rejected by the server.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsVerifying(false);
+    }
+  };
 
   const loadDashboardData = async () => {
     try {
@@ -73,6 +102,10 @@ export default function AdminDashboard() {
         variant: 'destructive',
       });
     } finally {
+      // A 401 clears the stored admin key — return to the key-entry form
+      if (!getAdminKey()) {
+        setIsAuthorized(false);
+      }
       setIsLoading(false);
     }
   };
@@ -96,8 +129,9 @@ export default function AdminDashboard() {
   };
 
   const handleLogout = () => {
+    clearAdminKey();
     localStorage.removeItem('auth_token');
-    localStorage.removeItem('admin_token');
+    localStorage.removeItem('admin_token'); // legacy key from the old client-side guard
     navigate('/');
   };
 
@@ -136,6 +170,45 @@ export default function AdminDashboard() {
     msg.content?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     msg.topicTitle?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  if (!isAuthorized) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <Card className="w-full max-w-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <KeyRound className="w-5 h-5" />
+              Admin Access
+            </CardTitle>
+            <CardDescription>
+              Enter the admin API key to access the research dashboard.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleAdminLogin} className="space-y-4">
+              <Input
+                type="password"
+                placeholder="Admin API key"
+                value={keyInput}
+                onChange={(e) => setKeyInput(e.target.value)}
+                autoFocus
+              />
+              <Button type="submit" className="w-full" disabled={isVerifying || !keyInput.trim()}>
+                {isVerifying ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Verifying...
+                  </>
+                ) : (
+                  'Access Dashboard'
+                )}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

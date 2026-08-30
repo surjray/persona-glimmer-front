@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
+import { HashRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -26,16 +26,9 @@ const App = () => {
         <HashRouter>
           <Routes>
             <Route path="/" element={<Index />} />
-            <Route 
-              path="/admin" 
-              element={
-                localStorage.getItem('admin_token') ? (
-                  <AdminDashboard />
-                ) : (
-                  <Navigate to="/" replace />
-                )
-              } 
-            />
+            {/* AdminDashboard gates itself: it asks for the admin API key and
+                verifies it against the backend before showing any data */}
+            <Route path="/admin" element={<AdminDashboard />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

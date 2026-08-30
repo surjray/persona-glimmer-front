@@ -10,7 +10,7 @@ param(
     [string]$UserId = ''
 )
 
-$adminKey = 'backend123'
+$adminKey = 'REPLACE_WITH_ADMIN_API_KEY'
 $baseUrl = 'https://persona-glimmer-backend.onrender.com/api/admin'
 $headers = @{'x-admin-api-key' = $adminKey}
 

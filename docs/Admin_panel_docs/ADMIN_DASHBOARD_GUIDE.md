@@ -2,26 +2,18 @@
 
 ## Overview
 
-The admin dashboard is now built into the website. The owner can log in with special credentials to view all database data directly in the browser.
-
----
-
-## Admin Login Credentials
-
-**Email:** `yazdani.e@gmail.com`  
-**Password:** `backend123`
+The admin dashboard is built into the website at `/#/admin`. Access requires the **admin API key** (the `ADMIN_API_KEY` environment variable configured on the backend). There are no hardcoded admin credentials — the key is entered in the browser, verified against the backend, and kept only for the current browser session.
 
 ---
 
 ## How to Access
 
-1. **Go to your website** (Netlify URL)
-2. **Click "Sign In"** (or go to login page)
-3. **Enter admin credentials:**
-   - Email: `yazdani.e@gmail.com`
-   - Password: `backend123`
-4. **Click "Sign In"**
-5. **You'll be automatically redirected to:** `/admin` (Admin Dashboard)
+1. **Go to your website's admin route:** `https://your-netlify-site.netlify.app/#/admin`
+   (a plain `/admin` URL redirects there automatically)
+2. **Enter the admin API key** in the "Admin Access" form — the value of `ADMIN_API_KEY` set in the backend's environment (Render dashboard → your service → Environment).
+3. The key is verified against the backend (`GET /api/admin/verify`). On success the dashboard loads.
+
+The key is stored in `sessionStorage` only — closing the tab clears it, and you'll be asked for it again next time.
 
 ---
 
@@ -91,87 +83,34 @@ The admin dashboard is now built into the website. The owner can log in with spe
 
 ## Security
 
-- ✅ Only `yazdani.e@gmail.com` with password `backend123` can access
-- ✅ Admin dashboard is protected route
-- ✅ Regular users cannot access `/admin` route
-- ✅ Admin API key (`backend123`) is used for data access
+- The backend validates the `x-admin-api-key` header on every `/api/admin/*` request (timing-safe comparison).
+- If `ADMIN_API_KEY` is not set on the backend, the admin API is **disabled entirely** — there is no fallback key and no development bypass.
+- Admin endpoints are rate-limited (100 requests / 15 minutes), which also throttles key guessing.
+- The key never ships in the frontend bundle and is never written to disk by the app; treat it like a password and share it only with researchers who need data access.
 
 ---
 
 ## Logout
 
 - Click **"Logout"** button in top right
-- Returns to main login page
-- Clears admin session
-
----
-
-## Direct URL Access
-
-If you're already logged in as admin, you can directly visit:
-```
-https://your-netlify-site.netlify.app/admin
-```
-
-**Note:** If you're not logged in as admin, you'll be redirected to the main page.
+- Clears the stored admin key and returns to the main page
 
 ---
 
 ## Troubleshooting
 
-### Can't Access Admin Dashboard
+### "Access denied" / "Invalid admin key"
 
-1. **Check credentials:**
-   - Email must be exactly: `yazdani.e@gmail.com`
-   - Password must be exactly: `backend123`
-   - Case-sensitive
-
-2. **Clear browser cache:**
-   - Clear localStorage
-   - Try logging in again
-
-3. **Check URL:**
-   - Should redirect to `/admin` after login
-   - If not, manually go to `/admin`
+1. Confirm the key matches `ADMIN_API_KEY` in the backend environment exactly (no leading/trailing spaces).
+2. If the backend responds with "Admin API is disabled", `ADMIN_API_KEY` is not set on the server — add it in the Render dashboard and redeploy/restart.
 
 ### Data Not Loading
 
 1. **Check backend is running:**
-   - Verify Render backend is live
+   - Verify Render backend is live (`/health` endpoint)
    - Check backend logs for errors
+2. On the free tier the backend may need ~30–60s to wake from idle; the dashboard waits on `/health` before loading.
 
-2. **Check Admin API Key:**
-   - Should be `backend123` in Render environment variables
-   - Should match the key in the code
+### Changing the key
 
----
-
-## Summary
-
-✅ **Admin Dashboard:** Built into website  
-✅ **Login:** `yazdani.e@gmail.com` / `backend123`  
-✅ **Access:** Automatic redirect after admin login  
-✅ **Features:** View all users, messages, surveys  
-✅ **Export:** CSV download available  
-✅ **Security:** Protected route, only owner can access
-
----
-
-## Next Steps
-
-1. **Test admin login:**
-   - Go to your website
-   - Login with admin credentials
-   - Should see admin dashboard
-
-2. **Explore data:**
-   - Browse different tabs
-   - View user details
-   - Export data as needed
-
-3. **Commit changes:**
-   ```bash
-   git add src/pages/AdminDashboard.tsx src/pages/Index.tsx src/App.tsx src/lib/api.ts
-   git commit -m "Add admin dashboard with database access"
-   git push origin main
-   ```
+Set a new `ADMIN_API_KEY` in the Render environment and restart the service. Anyone using the dashboard just enters the new key — no frontend change or redeploy is needed.

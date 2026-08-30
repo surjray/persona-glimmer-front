@@ -1,6 +1,8 @@
 import { Router, RequestHandler } from 'express';
+import rateLimit from 'express-rate-limit';
 import {
   requireAdmin,
+  verifyAdminKey,
   getAllUsers,
   getAllMessages,
   getAllLiteracySurveyResponses,
@@ -11,10 +13,24 @@ import {
   runSeeds,
 } from '../controllers/admin.controller';
 
+// Rate limiting for admin endpoints — also throttles brute-forcing of the API key,
+// since failed (401) attempts count against the limit
+const adminRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100,
+  message: 'Too many admin requests, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 const router = Router();
 
-// All admin routes require admin API key
+// All admin routes are rate-limited and require the admin API key
+router.use(adminRateLimiter);
 router.use(requireAdmin as RequestHandler);
+
+// Key verification (used by the admin dashboard login form)
+router.get('/verify', verifyAdminKey as RequestHandler);
 
 // Dashboard statistics
 router.get('/dashboard', getDashboardStats as RequestHandler);

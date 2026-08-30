@@ -2,7 +2,7 @@
 
 ## Your Admin API Key
 
-You've set: `backend123` in Render
+You've set: `REPLACE_WITH_ADMIN_API_KEY` in Render
 
 ---
 
@@ -16,7 +16,7 @@ You've set: `backend123` in Render
 
 2. **Add the header:**
    - Header name: `x-admin-api-key`
-   - Header value: `backend123`
+   - Header value: `REPLACE_WITH_ADMIN_API_KEY`
 
 3. **Visit these URLs:**
 
@@ -47,21 +47,21 @@ https://persona-glimmer-backend.onrender.com/api/admin/surveys/post-topic
 
 **Get Dashboard Stats:**
 ```powershell
-$headers = @{'x-admin-api-key' = 'backend123'}
+$headers = @{'x-admin-api-key' = 'REPLACE_WITH_ADMIN_API_KEY'}
 $response = Invoke-WebRequest -Uri "https://persona-glimmer-backend.onrender.com/api/admin/dashboard" -Headers $headers
 $response.Content | ConvertFrom-Json | ConvertTo-Json -Depth 10
 ```
 
 **Get All Users:**
 ```powershell
-$headers = @{'x-admin-api-key' = 'backend123'}
+$headers = @{'x-admin-api-key' = 'REPLACE_WITH_ADMIN_API_KEY'}
 $response = Invoke-WebRequest -Uri "https://persona-glimmer-backend.onrender.com/api/admin/users" -Headers $headers
 $response.Content | ConvertFrom-Json | ConvertTo-Json -Depth 10
 ```
 
 **Get All Messages:**
 ```powershell
-$headers = @{'x-admin-api-key' = 'backend123'}
+$headers = @{'x-admin-api-key' = 'REPLACE_WITH_ADMIN_API_KEY'}
 $response = Invoke-WebRequest -Uri "https://persona-glimmer-backend.onrender.com/api/admin/messages" -Headers $headers
 $response.Content | ConvertFrom-Json | ConvertTo-Json -Depth 10
 ```
@@ -72,17 +72,17 @@ $response.Content | ConvertFrom-Json | ConvertTo-Json -Depth 10
 
 **Get Dashboard Stats:**
 ```bash
-curl -H "x-admin-api-key: backend123" https://persona-glimmer-backend.onrender.com/api/admin/dashboard
+curl -H "x-admin-api-key: REPLACE_WITH_ADMIN_API_KEY" https://persona-glimmer-backend.onrender.com/api/admin/dashboard
 ```
 
 **Get All Users:**
 ```bash
-curl -H "x-admin-api-key: backend123" https://persona-glimmer-backend.onrender.com/api/admin/users
+curl -H "x-admin-api-key: REPLACE_WITH_ADMIN_API_KEY" https://persona-glimmer-backend.onrender.com/api/admin/users
 ```
 
 **Get All Messages:**
 ```bash
-curl -H "x-admin-api-key: backend123" https://persona-glimmer-backend.onrender.com/api/admin/messages
+curl -H "x-admin-api-key: REPLACE_WITH_ADMIN_API_KEY" https://persona-glimmer-backend.onrender.com/api/admin/messages
 ```
 
 ---
@@ -148,7 +148,7 @@ If you want to see the raw database:
 Test if your Admin API key works:
 
 ```powershell
-$headers = @{'x-admin-api-key' = 'backend123'}
+$headers = @{'x-admin-api-key' = 'REPLACE_WITH_ADMIN_API_KEY'}
 Invoke-WebRequest -Uri "https://persona-glimmer-backend.onrender.com/api/admin/dashboard" -Headers $headers
 ```
 
@@ -159,7 +159,7 @@ If you get JSON data back, it's working! ✅
 ## Important Notes
 
 - ✅ **Database is already connected** - Your backend uses the Render database
-- ✅ **Admin API Key:** `backend123` (set in Render)
+- ✅ **Admin API Key:** `REPLACE_WITH_ADMIN_API_KEY` (set in Render)
 - ⚠️ **Security:** Don't share your admin API key publicly
 - ✅ **All data is accessible** via Admin API endpoints
 

@@ -3,9 +3,7 @@ import { query } from '../config/database';
 import { ValidationError } from '../utils/errors';
 import { readFileSync } from 'fs';
 import { join } from 'path';
-
-// Simple admin authentication - check for admin API key in header
-const ADMIN_API_KEY = process.env.ADMIN_API_KEY || 'dev-admin-key-change-in-production';
+import crypto from 'crypto';
 
 export interface AdminRequest extends Request {
   headers: {
@@ -14,22 +12,38 @@ export interface AdminRequest extends Request {
   };
 }
 
-// Middleware to check admin access
+// Constant-time comparison of two strings of arbitrary length
+const timingSafeKeyCompare = (a: string, b: string): boolean => {
+  const hashA = crypto.createHash('sha256').update(a).digest();
+  const hashB = crypto.createHash('sha256').update(b).digest();
+  return crypto.timingSafeEqual(hashA, hashB);
+};
+
+// Middleware to check admin access.
+// Fails closed: if ADMIN_API_KEY is not configured, the admin API is disabled entirely
+// (no fallback key, no development bypass). The key is read at request time so a
+// missing dotenv load at module import cannot silently disable the check.
 export const requireAdmin = (
   req: AdminRequest,
   res: Response,
   next: NextFunction
 ): void => {
-  const apiKey = req.headers['x-admin-api-key'];
-  
-  // In development, if ADMIN_API_KEY is not set in env, allow access
-  // Otherwise, require the key to match
-  if (process.env.NODE_ENV === 'development' && ADMIN_API_KEY === 'dev-admin-key-change-in-production') {
-    // No admin key configured, allow in dev mode
-    return next();
+  const configuredKey = process.env.ADMIN_API_KEY;
+
+  if (!configuredKey) {
+    res.status(403).json({
+      success: false,
+      error: {
+        message: 'Admin API is disabled: ADMIN_API_KEY is not configured on this server',
+        code: 'ADMIN_NOT_CONFIGURED',
+      },
+    });
+    return;
   }
-  
-  if (!apiKey || apiKey !== ADMIN_API_KEY) {
+
+  const apiKey = req.headers['x-admin-api-key'];
+
+  if (typeof apiKey !== 'string' || !timingSafeKeyCompare(apiKey, configuredKey)) {
     res.status(401).json({
       success: false,
       error: {
@@ -39,8 +53,16 @@ export const requireAdmin = (
     });
     return;
   }
-  
+
   next();
+};
+
+// Lightweight endpoint for the admin dashboard to verify a key before storing it
+export const verifyAdminKey = (
+  req: AdminRequest,
+  res: Response
+): void => {
+  res.json({ success: true, data: { ok: true } });
 };
 
 // Get all users with their agent assignments and progress
